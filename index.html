@@ -53,6 +53,20 @@ input[type="range"]{width:100%;accent-color:var(--accent);cursor:pointer}
 .check{display:flex;align-items:center;gap:8px;margin:5px 0;
   font-size:0.83rem;cursor:pointer;user-select:none}
 .check input{accent-color:var(--accent);cursor:pointer}
+.toggle-switch{display:flex;align-items:center;gap:8px;padding:6px 0;
+  cursor:pointer;user-select:none;font-size:0.83rem}
+.toggle-switch input{position:absolute;opacity:0;width:0;height:0;pointer-events:none}
+.toggle-switch .slider{position:relative;width:36px;height:20px;
+  background:#cdd3da;border-radius:999px;transition:background .15s;flex-shrink:0}
+.toggle-switch .slider::after{content:"";position:absolute;top:2px;left:2px;
+  width:16px;height:16px;background:#fff;border-radius:50%;
+  transition:transform .15s;box-shadow:0 1px 3px rgba(0,0,0,0.25)}
+.toggle-switch input:checked + .slider{background:var(--accent)}
+.toggle-switch input:checked + .slider::after{transform:translateX(16px)}
+.toggle-switch .ts-label{flex:1;color:var(--text)}
+.toggle-switch .ts-swatch{width:22px;height:0;border-top:3px solid;
+  flex-shrink:0}
+.toggle-switch .ts-swatch.dashed{border-top-style:dashed}
 .presets{display:grid;grid-template-columns:1fr 1fr;gap:6px}
 button{padding:6px 9px;background:#fff;border:1px solid var(--border);
   border-radius:6px;font-size:0.78rem;color:var(--text);cursor:pointer;
@@ -166,6 +180,28 @@ svg.polar{width:100%;height:100%;display:block;cursor:crosshair;
           <button data-preset="hw">Hansen–Woodyard</button>
           <button class="full" data-preset="reset">Reset All</button>
         </div>
+      </div>
+
+      <div class="group">
+        <h3>Pattern Visibility</h3>
+        <label class="toggle-switch">
+          <span class="ts-swatch" style="border-color:var(--total)"></span>
+          <span class="ts-label">Total Pattern</span>
+          <input type="checkbox" id="t-total" checked>
+          <span class="slider"></span>
+        </label>
+        <label class="toggle-switch">
+          <span class="ts-swatch dashed" style="border-color:var(--af)"></span>
+          <span class="ts-label">Array Factor</span>
+          <input type="checkbox" id="t-af" checked>
+          <span class="slider"></span>
+        </label>
+        <label class="toggle-switch">
+          <span class="ts-swatch dashed" style="border-color:var(--element)"></span>
+          <span class="ts-label">Element Pattern</span>
+          <input type="checkbox" id="t-elem" checked>
+          <span class="slider"></span>
+        </label>
       </div>
 
       <div class="group">
@@ -900,6 +936,9 @@ document.querySelectorAll("button[data-preset]").forEach(btn => {
         document.getElementById("db-mode").checked=false;
         document.getElementById("db-min").value=-40;
         document.getElementById("db-min-field").style.display="none";
+        document.getElementById("t-total").checked=true;
+        document.getElementById("t-af").checked=true;
+        document.getElementById("t-elem").checked=true;
         document.querySelectorAll(".legend-item").forEach(li => li.classList.remove("disabled"));
         break;
     }
@@ -910,13 +949,28 @@ document.querySelectorAll("button[data-preset]").forEach(btn => {
   });
 });
 
-// Legend toggles
+// Pattern visibility — synced between toggle switches and legend clicks
+function setCurveVisible(curve, visible) {
+  state.visible[curve] = visible;
+  const cb = document.getElementById("t-" + curve);
+  if (cb && cb.checked !== visible) cb.checked = visible;
+  document.querySelectorAll(`.legend-item[data-curve="${curve}"]`).forEach(li => {
+    li.classList.toggle("disabled", !visible);
+  });
+  render();
+}
+
+document.getElementById("t-total").addEventListener("change", e =>
+  setCurveVisible("total", e.target.checked));
+document.getElementById("t-af").addEventListener("change", e =>
+  setCurveVisible("af", e.target.checked));
+document.getElementById("t-elem").addEventListener("change", e =>
+  setCurveVisible("elem", e.target.checked));
+
 document.querySelectorAll(".legend-item").forEach(li => {
   li.addEventListener("click", () => {
     const c = li.dataset.curve;
-    state.visible[c] = !state.visible[c];
-    li.classList.toggle("disabled", !state.visible[c]);
-    render();
+    setCurveVisible(c, !state.visible[c]);
   });
 });
 
