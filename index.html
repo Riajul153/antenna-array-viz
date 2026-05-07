@@ -1,0 +1,927 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Antenna Array Visualizer</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f4f6f8; --panel:#ffffff; --header:#dfeae7; --border:#d8dee4;
+  --text:#1a2533; --dim:#5a6776; --accent:#1f7a6b; --accent-dark:#155a4f;
+  --total:#c81e1e; --af:#1f7a3f; --element:#2e6cb8;
+  --grid:#c8cfd6; --grid-bold:#8a96a3;
+  --warn:#c97a14;
+}
+html,body{height:100%}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  background:var(--bg);color:var(--text);min-height:100vh;padding:16px;
+}
+.app{max-width:1500px;margin:0 auto;background:var(--panel);
+  border:1px solid var(--border);border-radius:12px;overflow:hidden;
+  box-shadow:0 4px 14px rgba(0,0,0,0.06)}
+.header-bar{display:flex;align-items:center;justify-content:space-between;
+  padding:14px 22px;background:linear-gradient(90deg,#e6f0ee 0%,#d6e8e3 100%);
+  border-bottom:1px solid var(--border);gap:20px;flex-wrap:wrap}
+.title{font-size:1.2rem;font-weight:600}
+.stats{display:flex;gap:24px;flex-wrap:wrap}
+.stat label{display:block;font-size:0.68rem;letter-spacing:0.09em;
+  color:var(--dim);font-weight:600}
+.stat span{display:block;font-family:"Consolas","Courier New",monospace;
+  font-size:0.92rem;font-weight:600;color:var(--text);margin-top:2px}
+.main{display:grid;grid-template-columns:340px 1fr;min-height:760px}
+@media (max-width:980px){.main{grid-template-columns:1fr}}
+.controls{padding:18px;background:#fafbfc;border-right:1px solid var(--border);
+  overflow-y:auto;max-height:calc(100vh - 80px)}
+.group{margin-bottom:18px}
+.group h3{font-size:0.74rem;letter-spacing:0.1em;text-transform:uppercase;
+  color:var(--accent);margin-bottom:8px;font-weight:700;
+  border-bottom:1px solid var(--border);padding-bottom:4px}
+.field{margin-bottom:10px}
+.field label{display:flex;justify-content:space-between;
+  font-size:0.83rem;margin-bottom:5px}
+.field label .val{font-family:monospace;color:var(--accent-dark);font-weight:700}
+.field select,.field input[type="number"]{width:100%;padding:6px 8px;
+  border:1px solid var(--border);border-radius:6px;background:#fff;
+  font-size:0.86rem;color:var(--text);font-family:inherit}
+.field select:focus,.field input:focus{outline:2px solid var(--accent);outline-offset:-1px}
+input[type="range"]{width:100%;accent-color:var(--accent);cursor:pointer}
+.row-input{display:flex;gap:6px;align-items:center}
+.row-input input[type="number"]{flex:1}
+.row-input button{padding:6px 10px}
+.check{display:flex;align-items:center;gap:8px;margin:5px 0;
+  font-size:0.83rem;cursor:pointer;user-select:none}
+.check input{accent-color:var(--accent);cursor:pointer}
+.presets{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+button{padding:6px 9px;background:#fff;border:1px solid var(--border);
+  border-radius:6px;font-size:0.78rem;color:var(--text);cursor:pointer;
+  transition:all .12s;font-family:inherit}
+button:hover{background:var(--accent);color:#fff;border-color:var(--accent)}
+button:active{transform:translateY(1px)}
+button.full{grid-column:span 2}
+button.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+button.primary:hover{background:var(--accent-dark);border-color:var(--accent-dark)}
+.plot-area{padding:14px 18px 18px;display:flex;flex-direction:column;
+  align-items:center;position:relative;min-width:0}
+.plot-wrap{width:100%;max-width:760px;aspect-ratio:1;position:relative;
+  background:#fff;border-radius:8px}
+svg.polar{width:100%;height:100%;display:block;cursor:crosshair;
+  touch-action:none;user-select:none}
+.tooltip{position:absolute;background:rgba(26,37,51,0.95);color:#fff;
+  padding:6px 9px;border-radius:6px;font-size:0.76rem;font-family:monospace;
+  pointer-events:none;display:none;z-index:10;white-space:nowrap;
+  box-shadow:0 2px 8px rgba(0,0,0,0.2)}
+.axis-note{font-size:0.78rem;color:var(--dim);margin-top:4px;text-align:center}
+.below{width:100%;max-width:760px;display:grid;
+  grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+@media (max-width:760px){.below{grid-template-columns:1fr}}
+.legend{padding:9px 12px;background:#fafbfc;border:1px solid var(--border);
+  border-radius:8px;display:flex;flex-direction:column;gap:6px}
+.legend-item{display:flex;align-items:center;gap:8px;font-size:0.8rem;
+  cursor:pointer;user-select:none;transition:opacity .12s}
+.legend-item.disabled{opacity:0.32}
+.legend-swatch{width:26px;height:0;border-top:3px solid;flex-shrink:0}
+.legend-swatch.dashed{border-top-style:dashed}
+.info-panel{background:#fafbfc;border:1px solid var(--border);
+  border-radius:8px;padding:9px 12px;font-size:0.8rem;font-family:monospace}
+.info-panel .row{display:flex;justify-content:space-between;padding:1px 0}
+.info-panel .row span:first-child{color:var(--dim)}
+.info-panel .hd{font-family:inherit;font-weight:700;color:var(--accent);
+  font-size:0.72rem;letter-spacing:0.08em;text-transform:uppercase;
+  margin-bottom:5px;border-bottom:1px solid var(--border);padding-bottom:3px}
+.info-panel .warn{color:var(--warn);font-weight:700}
+.formula{font-family:"Cambria Math",Cambria,Georgia,serif;font-size:0.85rem;
+  color:var(--text);background:#f0f3f5;padding:9px 12px;border-radius:6px;
+  margin-top:10px;width:100%;max-width:760px;line-height:1.5}
+.formula b{font-family:inherit;color:var(--accent-dark)}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="header-bar">
+    <div class="title">Antenna Array Visualizer</div>
+    <div class="stats">
+      <div class="stat"><label>ELEMENTS</label><span id="stat-N">2</span></div>
+      <div class="stat"><label>SPACING</label><span id="stat-d">0.50 λ</span></div>
+      <div class="stat"><label>PHASE β</label><span id="stat-beta">0°</span></div>
+      <div class="stat"><label>ORIENT α</label><span id="stat-alpha">0°</span></div>
+      <div class="stat"><label>TYPE</label><span id="stat-type">Hertzian Dipole</span></div>
+    </div>
+  </header>
+
+  <div class="main">
+    <aside class="controls">
+      <div class="group">
+        <h3>Element</h3>
+        <div class="field">
+          <label>Type</label>
+          <select id="elem-type">
+            <option value="iso">Isotropic</option>
+            <option value="hertz" selected>Hertzian Dipole</option>
+            <option value="half">Half-Wave Dipole (λ/2)</option>
+            <option value="full">Full-Wave Dipole (λ)</option>
+            <option value="threehalf">3λ/2 Dipole</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Orientation α (w.r.t. z-axis) <span class="val" id="lbl-alpha">0°</span></label>
+          <input type="range" id="alpha" min="-90" max="90" step="1" value="0">
+        </div>
+      </div>
+
+      <div class="group">
+        <h3>Array Geometry</h3>
+        <div class="field">
+          <label>Number of Elements N <span class="val" id="lbl-N">2</span></label>
+          <input type="range" id="N" min="1" max="32" step="1" value="2">
+        </div>
+        <div class="field">
+          <label>Spacing d / λ <span class="val" id="lbl-d">0.50</span></label>
+          <input type="range" id="d" min="0.05" max="2" step="0.01" value="0.5">
+        </div>
+        <div class="field">
+          <label>Progressive Phase β <span class="val" id="lbl-beta">0°</span></label>
+          <input type="range" id="beta" min="-180" max="180" step="1" value="0">
+        </div>
+      </div>
+
+      <div class="group">
+        <h3>Beam Steering</h3>
+        <div class="field">
+          <label>Target main-beam angle φ₀ (deg)</label>
+          <div class="row-input">
+            <input type="number" id="scan-target" value="90" min="0" max="180" step="1">
+            <button class="primary" id="scan-apply">Steer</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="group">
+        <h3>Phase Presets</h3>
+        <div class="presets">
+          <button data-preset="broadside">Broadside</button>
+          <button data-preset="endfire-fwd">Endfire 0°</button>
+          <button data-preset="endfire-bwd">Endfire 180°</button>
+          <button data-preset="hw">Hansen–Woodyard</button>
+          <button class="full" data-preset="reset">Reset All</button>
+        </div>
+      </div>
+
+      <div class="group">
+        <h3>Display</h3>
+        <label class="check"><input type="checkbox" id="show-grid" checked> Show grid</label>
+        <label class="check"><input type="checkbox" id="show-labels" checked> Show angle labels</label>
+        <label class="check"><input type="checkbox" id="show-elements" checked> Show array layout</label>
+        <label class="check"><input type="checkbox" id="show-beam" checked> Show main-beam arrow</label>
+        <label class="check"><input type="checkbox" id="db-mode"> dB scale</label>
+        <div class="field" id="db-min-field" style="display:none">
+          <label>Min dB <span class="val" id="lbl-dbmin">−40</span></label>
+          <input type="range" id="db-min" min="-60" max="-10" step="1" value="-40">
+        </div>
+      </div>
+
+      <div class="group">
+        <h3>Marker (click plot)</h3>
+        <div class="info-panel" id="click-info">
+          <div class="row"><span>Click on plot to inspect.</span></div>
+        </div>
+      </div>
+    </aside>
+
+    <section class="plot-area">
+      <div class="plot-wrap">
+        <svg id="polar" class="polar" viewBox="0 0 800 800"
+             preserveAspectRatio="xMidYMid meet" tabindex="0"></svg>
+        <div id="tooltip" class="tooltip"></div>
+      </div>
+      <div class="axis-note">Array axis: 0°/180° • Broadside: 90°/270° (when β = 0)</div>
+
+      <div class="below">
+        <div class="legend" id="legend">
+          <div class="legend-item" data-curve="total">
+            <div class="legend-swatch" style="border-color:var(--total)"></div>
+            <span>Total Pattern (Normalized)</span>
+          </div>
+          <div class="legend-item" data-curve="af">
+            <div class="legend-swatch dashed" style="border-color:var(--af)"></div>
+            <span>Array Factor</span>
+          </div>
+          <div class="legend-item" data-curve="elem">
+            <div class="legend-swatch dashed" style="border-color:var(--element)"></div>
+            <span>Element Pattern</span>
+          </div>
+        </div>
+
+        <div class="info-panel">
+          <div class="hd">Pattern Analysis</div>
+          <div id="analysis"></div>
+        </div>
+      </div>
+
+      <div class="formula" id="formula"></div>
+    </section>
+  </div>
+</div>
+
+<script>
+"use strict";
+
+/* =====================================================
+   STATE
+   ===================================================== */
+const state = {
+  N:2, d:0.5, beta:0, alpha:0, elemType:"hertz",
+  showGrid:true, showLabels:true, showElements:true, showBeam:true,
+  dbMode:false, dbMin:-40,
+  visible:{total:true, af:true, elem:true},
+  clickAngle:null, hoverAngle:null, dragging:false,
+};
+
+const ELEMENT_NAMES = {
+  iso:"Isotropic", hertz:"Hertzian Dipole",
+  half:"Half-Wave Dipole", full:"Full-Wave Dipole",
+  threehalf:"3λ/2 Dipole"
+};
+
+/* =====================================================
+   MATH
+   φ = polar angle measured CCW from positive x-axis (the array axis).
+   Plot uses flipped y so that screen-CW labels match the reference
+   image (0° right, 90° bottom, 180° left, 270° top).
+   α = angle between element (dipole) axis and array (z) axis,
+       measured in the plane of the plot.
+   ===================================================== */
+
+function elementPatternRaw(phi, type) {
+  // base pattern, dipole aligned with array axis (alpha = 0)
+  const cphi = Math.cos(phi);
+  const sphi = Math.sin(phi);
+  const aSin = Math.abs(sphi);
+  const eps = 1e-7;
+  switch (type) {
+    case "iso":   return 1;
+    case "hertz": return aSin;
+    case "half":  // |cos((π/2)cos φ) / sin φ|
+      if (aSin < eps) return 0;
+      return Math.abs(Math.cos((Math.PI/2)*cphi) / sphi);
+    case "full":  // |[cos(π cos φ)+1] / sin φ|, max=2 at broadside
+      if (aSin < eps) return 0;
+      return Math.abs((Math.cos(Math.PI*cphi)+1) / sphi);
+    case "threehalf": // |cos((3π/2) cos φ) / sin φ|
+      if (aSin < eps) return 0;
+      return Math.abs(Math.cos((3*Math.PI/2)*cphi) / sphi);
+    default:      return 1;
+  }
+}
+
+// cache element-pattern peak (so we can normalize to 1)
+const ELEM_MAX = {};
+function elementMax(type) {
+  if (ELEM_MAX[type] !== undefined) return ELEM_MAX[type];
+  let m = 0;
+  for (let i = 0; i < 7200; i++) {
+    const v = elementPatternRaw((i/7200)*2*Math.PI, type);
+    if (v > m) m = v;
+  }
+  if (m === 0) m = 1;
+  ELEM_MAX[type] = m;
+  return m;
+}
+
+function elementPattern(phi, type, alphaRad) {
+  // rotate pattern by alpha: replace phi with (phi - alpha)
+  return elementPatternRaw(phi - alphaRad, type) / elementMax(type);
+}
+
+function arrayFactor(phi, N, d, betaRad) {
+  // |AF| / N = |sin(N ψ/2) / (N sin(ψ/2))|, ψ = 2π(d/λ) cos φ + β
+  if (N <= 1) return 1;
+  const psi = 2*Math.PI*d*Math.cos(phi) + betaRad;
+  const half = psi / 2;
+  const sh = Math.sin(half);
+  if (Math.abs(sh) < 1e-9) return 1; // limit
+  return Math.abs(Math.sin(N*half) / (N*sh));
+}
+
+function patternAt(phi) {
+  const e = elementPattern(phi, state.elemType, state.alpha*Math.PI/180);
+  const af = arrayFactor(phi, state.N, state.d, state.beta*Math.PI/180);
+  return { elem:e, af:af, total:e*af };
+}
+
+/* =====================================================
+   SAMPLED PATTERN (cached for analysis & curves)
+   ===================================================== */
+const STEPS = 1080;
+const samples = new Array(STEPS+1);
+
+function recomputeSamples() {
+  for (let i = 0; i <= STEPS; i++) {
+    const phiDeg = (i/STEPS)*360;
+    const phi = phiDeg*Math.PI/180;
+    const v = patternAt(phi);
+    samples[i] = { phiDeg, phi, ...v };
+  }
+}
+
+/* =====================================================
+   PATTERN ANALYSIS (numerical)
+   - main-beam direction(s) = global maxima of total
+   - HPBW around main beam
+   - peak side-lobe level
+   - grating-lobe presence
+   ===================================================== */
+function analyzePattern() {
+  let maxV = 0;
+  for (let i = 0; i <= STEPS; i++) if (samples[i].total > maxV) maxV = samples[i].total;
+  if (maxV < 1e-9) return { mainBeams:[], hpbw:NaN, sllDb:NaN, grating:false, maxV:0 };
+
+  // Find local maxima & minima by 3-point comparison (cyclic)
+  const peaks = [];
+  for (let i = 0; i < STEPS; i++) {
+    const prev = samples[(i-1+STEPS)%STEPS].total;
+    const cur  = samples[i].total;
+    const next = samples[(i+1)%STEPS].total;
+    if (cur >= prev && cur >= next && cur > maxV*1e-3) {
+      peaks.push({ phiDeg:samples[i].phiDeg, val:cur });
+    }
+  }
+
+  // Main beams: peaks within 1% of maxV
+  const mainBeams = peaks.filter(p => p.val >= maxV*0.99)
+                         .map(p => p.phiDeg);
+
+  // Peak side-lobe (excluding main beams)
+  let sll = 0;
+  for (const p of peaks) {
+    if (p.val < maxV*0.99 && p.val > sll) sll = p.val;
+  }
+  const sllDb = sll > 0 ? 20*Math.log10(sll/maxV) : NaN;
+
+  // HPBW: scan outward from first main beam in samples (in degrees)
+  let hpbw = NaN;
+  if (mainBeams.length) {
+    // find sample index closest to first main beam
+    let mb = mainBeams[0];
+    let mbIdx = Math.round((mb/360)*STEPS) % STEPS;
+    const half = maxV / Math.SQRT2; // -3 dB level (in voltage)
+    // scan forward
+    let fwd = 0;
+    for (let k = 1; k <= STEPS/2; k++) {
+      const v = samples[(mbIdx+k)%STEPS].total;
+      if (v < half) { fwd = k*(360/STEPS); break; }
+    }
+    let bwd = 0;
+    for (let k = 1; k <= STEPS/2; k++) {
+      const v = samples[(mbIdx-k+STEPS)%STEPS].total;
+      if (v < half) { bwd = k*(360/STEPS); break; }
+    }
+    if (fwd && bwd) hpbw = fwd + bwd;
+  }
+
+  // Grating lobes: more than one main beam in the visible region (excluding the
+  // physical mirror twin from the array's symmetry).
+  // For β=0 there are always two main beams (φ and 360−φ, e.g., 90 & 270 for broadside),
+  // which are the SAME physical direction in 3D (axial symmetry). True grating lobes
+  // appear as additional peaks at near-100% level in distinct cos φ values.
+  // Simpler check: count distinct cos(φ) values among main beams.
+  const cosSet = new Set();
+  mainBeams.forEach(d => cosSet.add( Math.round(Math.cos(d*Math.PI/180)*1000)/1000 ));
+  const grating = cosSet.size > 1;
+
+  return { mainBeams, hpbw, sllDb, grating, maxV };
+}
+
+/* =====================================================
+   RENDERING
+   ===================================================== */
+const SVG_NS = "http://www.w3.org/2000/svg";
+const svg = document.getElementById("polar");
+const tooltip = document.getElementById("tooltip");
+const cx = 400, cy = 400, R = 320;
+
+// math angle φ (radians) → SVG (x,y).
+// Y is FLIPPED (cy + r·sin) so screen labels match reference: 90° at bottom, 270° at top.
+function polar(phi, r) {
+  return { x: cx + r*Math.cos(phi), y: cy + r*Math.sin(phi) };
+}
+function polarDeg(deg, r) { return polar(deg*Math.PI/180, r); }
+
+function magToRadius(m) {
+  if (state.dbMode) {
+    if (m <= 0) return 0;
+    let db = 20*Math.log10(m);
+    if (db < state.dbMin) db = state.dbMin;
+    return R * (db - state.dbMin) / (-state.dbMin);
+  }
+  return Math.max(0, Math.min(1, m)) * R;
+}
+
+function el(name, attrs, text) {
+  const e = document.createElementNS(SVG_NS, name);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  if (text !== undefined) e.textContent = text;
+  return e;
+}
+
+function clearSvg() { while (svg.firstChild) svg.removeChild(svg.firstChild); }
+
+function drawGrid() {
+  // outer disk (white)
+  svg.appendChild(el("circle", { cx, cy, r:R, fill:"#ffffff" }));
+  if (!state.showGrid) {
+    // outer ring still
+    svg.appendChild(el("circle", { cx, cy, r:R, fill:"none",
+      stroke:"#8a96a3", "stroke-width":1.2 }));
+    return;
+  }
+  const ringFracs = [0.25, 0.5, 0.75, 1.0];
+  ringFracs.forEach((v, idx) => {
+    const r = R*v;
+    const isOuter = (idx === ringFracs.length-1);
+    svg.appendChild(el("circle", {
+      cx, cy, r, fill:"none",
+      stroke: isOuter ? "var(--grid-bold)" : "var(--grid)",
+      "stroke-width": isOuter ? 1.2 : 1,
+      "stroke-dasharray": isOuter ? "" : "3,3"
+    }));
+    if (state.showLabels) {
+      let txt;
+      if (state.dbMode) {
+        const db = state.dbMin*(1 - v);
+        txt = (db === 0 ? "0" : db.toFixed(0)) + " dB";
+      } else {
+        txt = v.toFixed(2);
+      }
+      const t = el("text", {
+        x: cx + r + 4, y: cy + 4,
+        "font-size":11, fill:"var(--dim)", "font-family":"monospace"
+      }, txt);
+      svg.appendChild(t);
+    }
+  });
+  // radial spokes every 30°
+  for (let a = 0; a < 360; a += 30) {
+    const p = polarDeg(a, R);
+    svg.appendChild(el("line", {
+      x1:cx, y1:cy, x2:p.x, y2:p.y,
+      stroke:"var(--grid)", "stroke-width":1, "stroke-dasharray":"2,3"
+    }));
+  }
+}
+
+function drawAngleLabels() {
+  if (!state.showLabels) return;
+  for (let a = 0; a < 360; a += 30) {
+    const p = polarDeg(a, R + 22);
+    svg.appendChild(el("text", {
+      x:p.x, y:p.y, "text-anchor":"middle",
+      "dominant-baseline":"middle", "font-size":12,
+      fill:"var(--text)", "font-family":"sans-serif"
+    }, a + "°"));
+  }
+}
+
+function curvePath(field) {
+  let s = "";
+  for (let i = 0; i <= STEPS; i++) {
+    const r = magToRadius(samples[i][field]);
+    const p = polarDeg(samples[i].phiDeg, r);
+    s += (i === 0 ? "M" : "L") + p.x.toFixed(2) + "," + p.y.toFixed(2) + " ";
+  }
+  return s;
+}
+
+function drawCurves() {
+  if (state.visible.elem) {
+    svg.appendChild(el("path", {
+      d:curvePath("elem"), fill:"none",
+      stroke:"var(--element)", "stroke-width":2,
+      "stroke-dasharray":"6,4", "stroke-linejoin":"round",
+      "stroke-linecap":"round"
+    }));
+  }
+  if (state.visible.af) {
+    svg.appendChild(el("path", {
+      d:curvePath("af"), fill:"none",
+      stroke:"var(--af)", "stroke-width":2,
+      "stroke-dasharray":"6,4", "stroke-linejoin":"round",
+      "stroke-linecap":"round"
+    }));
+  }
+  if (state.visible.total) {
+    svg.appendChild(el("path", {
+      d:curvePath("total"), fill:"none",
+      stroke:"var(--total)", "stroke-width":3,
+      "stroke-linejoin":"round", "stroke-linecap":"round"
+    }));
+  }
+}
+
+function drawBeamArrow(analysis) {
+  if (!state.showBeam || !analysis.mainBeams.length) return;
+  for (const mbDeg of analysis.mainBeams) {
+    const r = R + 6;
+    const p = polarDeg(mbDeg, r);
+    // small triangle pointing inward
+    const phi = mbDeg*Math.PI/180;
+    const pa = polarDeg(mbDeg, r);
+    const pb = { x: pa.x + 9*Math.cos(phi+2.6), y: pa.y + 9*Math.sin(phi+2.6) };
+    const pc = { x: pa.x + 9*Math.cos(phi-2.6), y: pa.y + 9*Math.sin(phi-2.6) };
+    svg.appendChild(el("polygon", {
+      points: `${pa.x},${pa.y} ${pb.x},${pb.y} ${pc.x},${pc.y}`,
+      fill:"var(--total)", opacity:0.85
+    }));
+  }
+}
+
+function drawArrayLayout() {
+  if (!state.showElements) return;
+  // small horizontal strip at bottom of the plot, drawn relative to array (z) axis
+  // along the 0°-180° line through the centre, with element dots, plus an
+  // arrow indicating tilted dipole orientation α.
+  const N = state.N;
+  const d = state.d;
+  const total = (N-1)*d; // wavelengths
+  const stripY = 770;
+  const stripPad = 80;
+  const stripW = 800 - 2*stripPad;
+  const scale = total > 0 ? Math.min(stripW/total, 60) : 0;
+  const start = 400 - (total*scale)/2;
+
+  // background
+  svg.appendChild(el("rect", {
+    x:stripPad-10, y:stripY-22, width:stripW+20, height:40,
+    fill:"#fafbfc", stroke:"var(--border)", "stroke-width":1, rx:6
+  }));
+  svg.appendChild(el("text", {
+    x:stripPad-6, y:stripY-8, "font-size":10, fill:"var(--dim)"
+  }, `Array layout (along z-axis) — N=${N}, d=${d.toFixed(2)}λ`));
+
+  for (let i = 0; i < N; i++) {
+    const x = start + i*d*scale;
+    // element dot
+    svg.appendChild(el("circle", {
+      cx:x, cy:stripY+6, r:5,
+      fill:"var(--accent)", stroke:"var(--accent-dark)", "stroke-width":1
+    }));
+    // tilted dipole indicator (small line through dot at angle α from z-axis)
+    const aRad = state.alpha*Math.PI/180;
+    // z-axis is horizontal in the strip; α measured from z (CCW)
+    const len = 9;
+    // tilting "in plane" — show as a 2D line; sign flipped for typical visual
+    const dx = len*Math.cos(aRad);
+    const dy = -len*Math.sin(aRad);
+    svg.appendChild(el("line", {
+      x1:x-dx, y1:stripY+6-dy, x2:x+dx, y2:stripY+6+dy,
+      stroke:"var(--accent-dark)", "stroke-width":2, "stroke-linecap":"round"
+    }));
+  }
+}
+
+function drawMarker(angleDeg, kind) {
+  if (angleDeg === null || angleDeg === undefined) return;
+  const phi = angleDeg*Math.PI/180;
+  const v = patternAt(phi);
+  const r = magToRadius(v.total);
+  const p = polar(phi, r);
+  const outer = polar(phi, R);
+  const isClick = (kind === "click");
+  svg.appendChild(el("line", {
+    x1:cx, y1:cy, x2:outer.x, y2:outer.y,
+    stroke: isClick ? "#1a2533" : "var(--dim)",
+    "stroke-width":1, "stroke-dasharray":"4,3",
+    opacity: isClick ? 0.8 : 0.5
+  }));
+  svg.appendChild(el("circle", {
+    cx:p.x, cy:p.y, r:isClick?6:4,
+    fill:"#fff",
+    stroke: isClick ? "#1a2533" : "var(--accent-dark)",
+    "stroke-width":2
+  }));
+}
+
+function render() {
+  clearSvg();
+  drawGrid();
+  drawAngleLabels();
+  drawCurves();
+  const analysis = analyzePattern();
+  drawBeamArrow(analysis);
+  drawArrayLayout();
+  drawMarker(state.hoverAngle, "hover");
+  drawMarker(state.clickAngle, "click");
+  updateAnalysisPanel(analysis);
+}
+
+/* =====================================================
+   UI SYNC / TEXT
+   ===================================================== */
+function syncStats() {
+  document.getElementById("stat-N").textContent = state.N;
+  document.getElementById("stat-d").textContent = state.d.toFixed(2) + " λ";
+  document.getElementById("stat-beta").textContent = state.beta + "°";
+  document.getElementById("stat-alpha").textContent = state.alpha + "°";
+  document.getElementById("stat-type").textContent = ELEMENT_NAMES[state.elemType];
+  document.getElementById("lbl-N").textContent = state.N;
+  document.getElementById("lbl-d").textContent = state.d.toFixed(2);
+  document.getElementById("lbl-beta").textContent = state.beta + "°";
+  document.getElementById("lbl-alpha").textContent = state.alpha + "°";
+  document.getElementById("lbl-dbmin").textContent = state.dbMin;
+}
+
+function updateFormula() {
+  let elem;
+  switch (state.elemType) {
+    case "iso":       elem = "E(φ) = 1"; break;
+    case "hertz":     elem = "E(φ) = |sin(φ − α)|"; break;
+    case "half":      elem = "E(φ) = |cos((π/2)·cos(φ−α)) / sin(φ−α)|"; break;
+    case "full":      elem = "E(φ) ∝ |[cos(π·cos(φ−α)) + 1] / sin(φ−α)|"; break;
+    case "threehalf": elem = "E(φ) ∝ |cos((3π/2)·cos(φ−α)) / sin(φ−α)|"; break;
+  }
+  document.getElementById("formula").innerHTML =
+    `<b>F(φ) = E(φ) · AF(φ)</b> &nbsp; · &nbsp; ` + elem +
+    ` &nbsp; · &nbsp; |AF| = |sin(Nψ/2) / (N·sin(ψ/2))|, ` +
+    `&nbsp; ψ = 2π(d/λ)·cos(φ) + β`;
+}
+
+function updateClickInfo() {
+  const el = document.getElementById("click-info");
+  if (state.clickAngle === null) {
+    el.innerHTML = '<div class="row"><span>Click on plot to inspect.</span></div>';
+    return;
+  }
+  const phi = state.clickAngle*Math.PI/180;
+  const v = patternAt(phi);
+  const dbT = v.total>1e-9 ? (20*Math.log10(v.total)).toFixed(2) : "−∞";
+  const dbA = v.af>1e-9    ? (20*Math.log10(v.af)).toFixed(2)    : "−∞";
+  const dbE = v.elem>1e-9  ? (20*Math.log10(v.elem)).toFixed(2)  : "−∞";
+  el.innerHTML = `
+    <div class="row"><span>φ</span><span>${state.clickAngle.toFixed(1)}°</span></div>
+    <div class="row"><span>Element</span><span>${v.elem.toFixed(4)} (${dbE} dB)</span></div>
+    <div class="row"><span>Array Factor</span><span>${v.af.toFixed(4)} (${dbA} dB)</span></div>
+    <div class="row"><span>Total</span><span>${v.total.toFixed(4)} (${dbT} dB)</span></div>
+  `;
+}
+
+function updateAnalysisPanel(a) {
+  const el = document.getElementById("analysis");
+  if (!a.mainBeams.length) {
+    el.innerHTML = '<div class="row"><span>Pattern is zero everywhere.</span></div>';
+    return;
+  }
+  const mbStr = a.mainBeams.map(d => d.toFixed(1) + "°").join(", ");
+  const hpbwStr = isFinite(a.hpbw) ? a.hpbw.toFixed(1) + "°" : "—";
+  const sllStr = isFinite(a.sllDb) ? a.sllDb.toFixed(2) + " dB" : "—";
+  const gratingStr = a.grating
+    ? '<span class="warn">YES — grating lobes present</span>'
+    : "no";
+  el.innerHTML = `
+    <div class="row"><span>Main beam(s)</span><span>${mbStr}</span></div>
+    <div class="row"><span>HPBW (≈)</span><span>${hpbwStr}</span></div>
+    <div class="row"><span>Peak SLL</span><span>${sllStr}</span></div>
+    <div class="row"><span>Grating lobe</span><span>${gratingStr}</span></div>
+  `;
+}
+
+function refresh() {
+  syncStats();
+  updateFormula();
+  recomputeSamples();
+  render();
+  updateClickInfo();
+}
+
+/* =====================================================
+   INTERACTION
+   ===================================================== */
+function svgFromEvent(e) {
+  const rect = svg.getBoundingClientRect();
+  const sx = (e.clientX - rect.left) * (800/rect.width);
+  const sy = (e.clientY - rect.top)  * (800/rect.height);
+  return { sx, sy, dx: sx-cx, dy: sy-cy };
+}
+
+function angleFromEvent(e) {
+  const { dx, dy } = svgFromEvent(e);
+  const r = Math.hypot(dx, dy);
+  if (r > R + 30) return null;
+  let a = Math.atan2(dy, dx) * 180/Math.PI;
+  if (a < 0) a += 360;
+  return a;
+}
+
+function setHoverTooltip(e, angleDeg) {
+  if (angleDeg === null) {
+    tooltip.style.display = "none";
+    return;
+  }
+  const phi = angleDeg*Math.PI/180;
+  const v = patternAt(phi);
+  tooltip.innerHTML =
+    `φ = ${angleDeg.toFixed(1)}° &nbsp; ` +
+    `E=${v.elem.toFixed(3)} &nbsp; AF=${v.af.toFixed(3)} &nbsp; ` +
+    `<b>F=${v.total.toFixed(3)}</b>`;
+  tooltip.style.display = "block";
+  const rect = svg.getBoundingClientRect();
+  const wrapRect = svg.parentElement.getBoundingClientRect();
+  let tx = e.clientX - wrapRect.left + 12;
+  let ty = e.clientY - wrapRect.top + 12;
+  // Keep on screen
+  const tipW = tooltip.offsetWidth, tipH = tooltip.offsetHeight;
+  if (tx + tipW > wrapRect.width) tx = e.clientX - wrapRect.left - tipW - 12;
+  if (ty + tipH > wrapRect.height) ty = e.clientY - wrapRect.top - tipH - 12;
+  tooltip.style.left = tx + "px";
+  tooltip.style.top  = ty + "px";
+}
+
+svg.addEventListener("mousedown", e => {
+  const a = angleFromEvent(e);
+  if (a === null) return;
+  state.dragging = true;
+  state.clickAngle = a;
+  refresh();
+});
+svg.addEventListener("mousemove", e => {
+  const a = angleFromEvent(e);
+  if (state.dragging && a !== null) {
+    state.clickAngle = a;
+    state.hoverAngle = null;
+    setHoverTooltip(e, a);
+    refresh();
+    return;
+  }
+  state.hoverAngle = a;
+  setHoverTooltip(e, a);
+  render();  // light re-render only (samples unchanged)
+  updateClickInfo();
+});
+svg.addEventListener("mouseleave", () => {
+  state.hoverAngle = null;
+  state.dragging = false;
+  tooltip.style.display = "none";
+  render();
+});
+window.addEventListener("mouseup", () => { state.dragging = false; });
+svg.addEventListener("dblclick", () => {
+  state.clickAngle = null;
+  refresh();
+});
+
+// Touch: simple — treat first touch as drag
+svg.addEventListener("touchstart", e => {
+  if (!e.touches.length) return;
+  const t = e.touches[0];
+  const a = angleFromEvent({ clientX:t.clientX, clientY:t.clientY });
+  if (a === null) return;
+  state.dragging = true;
+  state.clickAngle = a;
+  refresh();
+  e.preventDefault();
+}, { passive:false });
+svg.addEventListener("touchmove", e => {
+  if (!state.dragging || !e.touches.length) return;
+  const t = e.touches[0];
+  const a = angleFromEvent({ clientX:t.clientX, clientY:t.clientY });
+  if (a === null) return;
+  state.clickAngle = a;
+  refresh();
+  e.preventDefault();
+}, { passive:false });
+svg.addEventListener("touchend", () => { state.dragging = false; });
+
+// Keyboard nudging
+svg.addEventListener("keydown", e => {
+  if (state.clickAngle === null) return;
+  const step = e.shiftKey ? 5 : 1;
+  if (e.key === "ArrowLeft" || e.key === "ArrowDown") {
+    state.clickAngle = (state.clickAngle - step + 360) % 360;
+    refresh(); e.preventDefault();
+  } else if (e.key === "ArrowRight" || e.key === "ArrowUp") {
+    state.clickAngle = (state.clickAngle + step) % 360;
+    refresh(); e.preventDefault();
+  } else if (e.key === "Escape") {
+    state.clickAngle = null; refresh(); e.preventDefault();
+  }
+});
+
+/* =====================================================
+   CONTROLS WIRING
+   ===================================================== */
+document.getElementById("elem-type").addEventListener("change", e => {
+  state.elemType = e.target.value; refresh();
+});
+document.getElementById("alpha").addEventListener("input", e => {
+  state.alpha = parseInt(e.target.value); refresh();
+});
+document.getElementById("N").addEventListener("input", e => {
+  state.N = parseInt(e.target.value); refresh();
+});
+document.getElementById("d").addEventListener("input", e => {
+  state.d = parseFloat(e.target.value); refresh();
+});
+document.getElementById("beta").addEventListener("input", e => {
+  state.beta = parseInt(e.target.value); refresh();
+});
+
+// Beam steering: β = -k·d·cos(φ₀)
+document.getElementById("scan-apply").addEventListener("click", () => {
+  const phi0 = parseFloat(document.getElementById("scan-target").value);
+  if (!isFinite(phi0)) return;
+  let beta = -360 * state.d * Math.cos(phi0*Math.PI/180); // degrees
+  // clamp into [-180, 180] (wrap modulo 360)
+  beta = ((beta + 180) % 360 + 360) % 360 - 180;
+  state.beta = Math.round(beta);
+  document.getElementById("beta").value = state.beta;
+  refresh();
+});
+
+// Display toggles
+document.getElementById("show-grid").addEventListener("change", e => {
+  state.showGrid = e.target.checked; render();
+});
+document.getElementById("show-labels").addEventListener("change", e => {
+  state.showLabels = e.target.checked; render();
+});
+document.getElementById("show-elements").addEventListener("change", e => {
+  state.showElements = e.target.checked; render();
+});
+document.getElementById("show-beam").addEventListener("change", e => {
+  state.showBeam = e.target.checked; render();
+});
+document.getElementById("db-mode").addEventListener("change", e => {
+  state.dbMode = e.target.checked;
+  document.getElementById("db-min-field").style.display = state.dbMode ? "" : "none";
+  refresh();
+});
+document.getElementById("db-min").addEventListener("input", e => {
+  state.dbMin = parseInt(e.target.value); refresh();
+});
+
+// Phase presets
+document.querySelectorAll("button[data-preset]").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const p = btn.dataset.preset;
+    switch (p) {
+      case "broadside":
+        state.beta = 0; break;
+      case "endfire-fwd": {
+        // φ₀ = 0  (along +z)  → β = -k·d·cos(0) = -2π d/λ
+        let b = -360 * state.d;
+        b = ((b+180)%360+360)%360 - 180;
+        state.beta = Math.round(b); break;
+      }
+      case "endfire-bwd": {
+        let b = 360 * state.d;
+        b = ((b+180)%360+360)%360 - 180;
+        state.beta = Math.round(b); break;
+      }
+      case "hw": {
+        // Hansen–Woodyard: β = -(kd + π/N)
+        let b = -360*state.d - 180/state.N;
+        b = ((b+180)%360+360)%360 - 180;
+        state.beta = Math.round(b); break;
+      }
+      case "reset":
+        state.N=2; state.d=0.5; state.beta=0; state.alpha=0;
+        state.elemType="hertz";
+        state.dbMode=false; state.dbMin=-40;
+        state.showGrid=true; state.showLabels=true;
+        state.showElements=true; state.showBeam=true;
+        state.visible={total:true,af:true,elem:true};
+        state.clickAngle=null; state.hoverAngle=null;
+        document.getElementById("elem-type").value="hertz";
+        document.getElementById("alpha").value=0;
+        document.getElementById("show-grid").checked=true;
+        document.getElementById("show-labels").checked=true;
+        document.getElementById("show-elements").checked=true;
+        document.getElementById("show-beam").checked=true;
+        document.getElementById("db-mode").checked=false;
+        document.getElementById("db-min").value=-40;
+        document.getElementById("db-min-field").style.display="none";
+        document.querySelectorAll(".legend-item").forEach(li => li.classList.remove("disabled"));
+        break;
+    }
+    document.getElementById("N").value = state.N;
+    document.getElementById("d").value = state.d;
+    document.getElementById("beta").value = state.beta;
+    refresh();
+  });
+});
+
+// Legend toggles
+document.querySelectorAll(".legend-item").forEach(li => {
+  li.addEventListener("click", () => {
+    const c = li.dataset.curve;
+    state.visible[c] = !state.visible[c];
+    li.classList.toggle("disabled", !state.visible[c]);
+    render();
+  });
+});
+
+// First render
+refresh();
+</script>
+</body>
+</html>
