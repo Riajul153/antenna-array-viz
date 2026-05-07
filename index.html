@@ -12,6 +12,7 @@
   --total:#c81e1e; --af:#1f7a3f; --element:#2e6cb8;
   --grid:#c8cfd6; --grid-bold:#8a96a3;
   --warn:#c97a14;
+  --axis-x:#c81e1e; --axis-y:#1f7a3f; --axis-z:#2e6cb8;
 }
 html,body{height:100%}
 body{
@@ -64,8 +65,7 @@ input[type="range"]{width:100%;accent-color:var(--accent);cursor:pointer}
 .toggle-switch input:checked + .slider{background:var(--accent)}
 .toggle-switch input:checked + .slider::after{transform:translateX(16px)}
 .toggle-switch .ts-label{flex:1;color:var(--text)}
-.toggle-switch .ts-swatch{width:22px;height:0;border-top:3px solid;
-  flex-shrink:0}
+.toggle-switch .ts-swatch{width:22px;height:0;border-top:3px solid;flex-shrink:0}
 .toggle-switch .ts-swatch.dashed{border-top-style:dashed}
 .presets{display:grid;grid-template-columns:1fr 1fr;gap:6px}
 button{padding:6px 9px;background:#fff;border:1px solid var(--border);
@@ -76,16 +76,40 @@ button:active{transform:translateY(1px)}
 button.full{grid-column:span 2}
 button.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
 button.primary:hover{background:var(--accent-dark);border-color:var(--accent-dark)}
+.view-toggle{display:flex;gap:0;margin-bottom:10px;width:100%;max-width:760px;
+  border:1px solid var(--border);border-radius:8px;overflow:hidden;background:#fff}
+.view-toggle button{flex:1;border:0;border-radius:0;padding:9px 12px;
+  font-size:0.86rem;font-weight:600;background:#fff;color:var(--dim)}
+.view-toggle button:hover{background:#f0f3f5;color:var(--text)}
+.view-toggle button.active{background:var(--accent);color:#fff}
+.view-toggle button + button{border-left:1px solid var(--border)}
+.view-toggle button.active + button{border-left:1px solid var(--accent)}
 .plot-area{padding:14px 18px 18px;display:flex;flex-direction:column;
   align-items:center;position:relative;min-width:0}
 .plot-wrap{width:100%;max-width:760px;aspect-ratio:1;position:relative;
-  background:#fff;border-radius:8px}
+  background:#fff;border-radius:8px;border:1px solid var(--border)}
 svg.polar{width:100%;height:100%;display:block;cursor:crosshair;
   touch-action:none;user-select:none}
+canvas#canvas-3d{width:100%;height:100%;display:block;border-radius:7px;
+  cursor:grab}
+canvas#canvas-3d:active{cursor:grabbing}
 .tooltip{position:absolute;background:rgba(26,37,51,0.95);color:#fff;
   padding:6px 9px;border-radius:6px;font-size:0.76rem;font-family:monospace;
   pointer-events:none;display:none;z-index:10;white-space:nowrap;
   box-shadow:0 2px 8px rgba(0,0,0,0.2)}
+.cmap-legend{position:absolute;right:10px;top:50%;transform:translateY(-50%);
+  display:flex;flex-direction:column;align-items:center;gap:6px;
+  background:rgba(255,255,255,0.85);padding:6px 8px;border-radius:6px;
+  border:1px solid var(--border);font-size:0.7rem;font-family:monospace;
+  color:var(--dim);pointer-events:none}
+.cmap-legend .bar{width:18px;height:160px;border:1px solid var(--border);
+  border-radius:3px;background:linear-gradient(to top,
+    rgb(68,1,84) 0%,rgb(58,76,141) 25%,rgb(33,145,140) 50%,
+    rgb(94,201,98) 75%,rgb(253,231,37) 100%)}
+.hint-3d{position:absolute;left:10px;bottom:10px;font-size:0.7rem;
+  color:var(--dim);background:rgba(255,255,255,0.85);padding:4px 8px;
+  border-radius:4px;border:1px solid var(--border);font-family:monospace;
+  pointer-events:none}
 .axis-note{font-size:0.78rem;color:var(--dim);margin-top:4px;text-align:center}
 .below{width:100%;max-width:760px;display:grid;
   grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
@@ -110,6 +134,8 @@ svg.polar{width:100%;height:100%;display:block;cursor:crosshair;
   margin-top:10px;width:100%;max-width:760px;line-height:1.5}
 .formula b{font-family:inherit;color:var(--accent-dark)}
 </style>
+<script src="https://unpkg.com/three@0.147.0/build/three.min.js"></script>
+<script src="https://unpkg.com/three@0.147.0/examples/js/controls/OrbitControls.js"></script>
 </head>
 <body>
 <div class="app">
@@ -121,6 +147,7 @@ svg.polar{width:100%;height:100%;display:block;cursor:crosshair;
       <div class="stat"><label>PHASE β</label><span id="stat-beta">0°</span></div>
       <div class="stat"><label>ORIENT α</label><span id="stat-alpha">0°</span></div>
       <div class="stat"><label>TYPE</label><span id="stat-type">Hertzian Dipole</span></div>
+      <div class="stat"><label>VIEW</label><span id="stat-view">2D / xz</span></div>
     </div>
   </header>
 
@@ -163,7 +190,7 @@ svg.polar{width:100%;height:100%;display:block;cursor:crosshair;
       <div class="group">
         <h3>Beam Steering</h3>
         <div class="field">
-          <label>Target main-beam angle φ₀ (deg)</label>
+          <label>Target main-beam angle θ₀ from z (deg)</label>
           <div class="row-input">
             <input type="number" id="scan-target" value="90" min="0" max="180" step="1">
             <button class="primary" id="scan-apply">Steer</button>
@@ -205,12 +232,33 @@ svg.polar{width:100%;height:100%;display:block;cursor:crosshair;
       </div>
 
       <div class="group">
+        <h3>Plot Plane (2D mode)</h3>
+        <div class="field">
+          <label>Plane</label>
+          <select id="plane">
+            <option value="xz" selected>xz-plane (φ_az = 0°)</option>
+            <option value="yz">yz-plane (φ_az = 90°)</option>
+            <option value="xy">xy-plane (perpendicular to z)</option>
+          </select>
+        </div>
+        <div class="field" id="pattern-3d-field" style="display:none">
+          <label>3D Surface Shows</label>
+          <select id="pattern-3d">
+            <option value="total" selected>Total Pattern (E·AF)</option>
+            <option value="af">Array Factor</option>
+            <option value="elem">Element Pattern</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="group">
         <h3>Display</h3>
         <label class="check"><input type="checkbox" id="show-grid" checked> Show grid</label>
         <label class="check"><input type="checkbox" id="show-labels" checked> Show angle labels</label>
+        <label class="check"><input type="checkbox" id="show-axes" checked> Show coordinate axes</label>
         <label class="check"><input type="checkbox" id="show-elements" checked> Show array layout</label>
         <label class="check"><input type="checkbox" id="show-beam" checked> Show main-beam arrow</label>
-        <label class="check"><input type="checkbox" id="db-mode"> dB scale</label>
+        <label class="check"><input type="checkbox" id="db-mode"> dB scale (2D)</label>
         <div class="field" id="db-min-field" style="display:none">
           <label>Min dB <span class="val" id="lbl-dbmin">−40</span></label>
           <input type="range" id="db-min" min="-60" max="-10" step="1" value="-40">
@@ -218,7 +266,7 @@ svg.polar{width:100%;height:100%;display:block;cursor:crosshair;
       </div>
 
       <div class="group">
-        <h3>Marker (click plot)</h3>
+        <h3>Marker (click 2D plot)</h3>
         <div class="info-panel" id="click-info">
           <div class="row"><span>Click on plot to inspect.</span></div>
         </div>
@@ -226,12 +274,30 @@ svg.polar{width:100%;height:100%;display:block;cursor:crosshair;
     </aside>
 
     <section class="plot-area">
-      <div class="plot-wrap">
+      <div class="view-toggle">
+        <button id="view-2d" class="active">2D Polar (Plane Cut)</button>
+        <button id="view-3d">3D Surface</button>
+      </div>
+
+      <div class="plot-wrap" id="plot-2d-wrap">
         <svg id="polar" class="polar" viewBox="0 0 800 800"
              preserveAspectRatio="xMidYMid meet" tabindex="0"></svg>
         <div id="tooltip" class="tooltip"></div>
       </div>
-      <div class="axis-note">Array axis: 0°/180° • Broadside: 90°/270° (when β = 0)</div>
+
+      <div class="plot-wrap" id="plot-3d-wrap" style="display:none">
+        <canvas id="canvas-3d" width="800" height="800"></canvas>
+        <div class="cmap-legend">
+          <span>1.0</span>
+          <div class="bar"></div>
+          <span>0.0</span>
+        </div>
+        <div class="hint-3d">Drag to rotate · scroll to zoom · right-drag to pan</div>
+      </div>
+
+      <div class="axis-note" id="axis-note">
+        Plane: xz · 0° = +z (array axis) · 90° = +x (broadside)
+      </div>
 
       <div class="below">
         <div class="legend" id="legend">
@@ -250,7 +316,7 @@ svg.polar{width:100%;height:100%;display:block;cursor:crosshair;
         </div>
 
         <div class="info-panel">
-          <div class="hd">Pattern Analysis</div>
+          <div class="hd">Pattern Analysis (current plane)</div>
           <div id="analysis"></div>
         </div>
       </div>
@@ -268,10 +334,14 @@ svg.polar{width:100%;height:100%;display:block;cursor:crosshair;
    ===================================================== */
 const state = {
   N:2, d:0.5, beta:0, alpha:0, elemType:"hertz",
-  showGrid:true, showLabels:true, showElements:true, showBeam:true,
+  showGrid:true, showLabels:true, showAxes:true,
+  showElements:true, showBeam:true,
   dbMode:false, dbMin:-40,
   visible:{total:true, af:true, elem:true},
   clickAngle:null, hoverAngle:null, dragging:false,
+  viewMode:"2d",     // "2d" | "3d"
+  plane:"xz",        // "xz" | "yz" | "xy"
+  pattern3D:"total", // "total" | "af" | "elem"
 };
 
 const ELEMENT_NAMES = {
@@ -281,166 +351,189 @@ const ELEMENT_NAMES = {
 };
 
 /* =====================================================
+   PLANES
+   Each plane defines orthonormal (u, v) so that
+     r̂(ψ) = cos(ψ)·u + sin(ψ)·v
+   parameterizes directions in that plane.
+   labels: text shown along screen-cardinal directions
+   (these correspond to ψ = 0°, 90°, 180°, 270°).
+   With the SVG y-axis flipped (cy + r·sinψ), screen
+   placement is: 0° → right, 90° → bottom, 180° → left, 270° → top.
+   ===================================================== */
+const PLANES = {
+  xz: {
+    name: "xz-plane (φ_az = 0°)",
+    u: [0,0,1], v: [1,0,0],
+    labels: { 0:"+z", 90:"+x", 180:"−z", 270:"−x" },
+    note: "0° = +z (array axis) · 90° = +x (broadside)"
+  },
+  yz: {
+    name: "yz-plane (φ_az = 90°)",
+    u: [0,0,1], v: [0,1,0],
+    labels: { 0:"+z", 90:"+y", 180:"−z", 270:"−y" },
+    note: "0° = +z (array axis) · 90° = +y (broadside)"
+  },
+  xy: {
+    name: "xy-plane (perpendicular to z, θ = 90°)",
+    u: [1,0,0], v: [0,1,0],
+    labels: { 0:"+x", 90:"+y", 180:"−x", 270:"−y" },
+    note: "Slice ⊥ to array axis · ψ here is the azimuth φ_az"
+  }
+};
+
+/* =====================================================
    MATH
-   φ = polar angle measured CCW from positive x-axis (the array axis).
-   Plot uses flipped y so that screen-CW labels match the reference
-   image (0° right, 90° bottom, 180° left, 270° top).
-   α = angle between element (dipole) axis and array (z) axis,
-       measured in the plane of the plot.
+   - Array along z. AF depends on cosθ where θ is angle
+     from z-axis: cosθ = direction · ẑ.
+   - Element axis tilted by α (in xz-plane):
+       n̂ = (sin α, 0, cos α)
+     Element pattern uses θ_d = angle from n̂:
+       cos θ_d = direction · n̂
+   - Total: F = E · AF (pattern multiplication, exact for
+     identical co-oriented elements).
    ===================================================== */
 
-function elementPatternRaw(phi, type) {
-  // base pattern, dipole aligned with array axis (alpha = 0)
-  const cphi = Math.cos(phi);
-  const sphi = Math.sin(phi);
-  const aSin = Math.abs(sphi);
-  const eps = 1e-7;
+// Element-pattern peaks (for normalisation to max = 1)
+const ELEM_MAX = (() => {
+  const out = {};
+  const types = ["iso","hertz","half","full","threehalf"];
+  const SAMPLES = 7200;
+  for (const t of types) {
+    let m = 0;
+    for (let i = 0; i < SAMPLES; i++) {
+      const th = (i/SAMPLES)*Math.PI;            // θ_d ∈ [0, π]
+      const c = Math.cos(th), s = Math.sin(th);
+      let v;
+      if (t === "iso") v = 1;
+      else if (t === "hertz") v = Math.abs(s);
+      else if (s < 1e-9) v = 0;
+      else if (t === "half") v = Math.abs(Math.cos((Math.PI/2)*c)/s);
+      else if (t === "full") v = Math.abs((Math.cos(Math.PI*c)+1)/s);
+      else if (t === "threehalf") v = Math.abs(Math.cos((3*Math.PI/2)*c)/s);
+      if (v > m) m = v;
+    }
+    out[t] = m || 1;
+  }
+  return out;
+})();
+
+// Element pattern as a function of cos(θ_d).  Returns value in [0, 1].
+function elementFromCos(cosThd, type) {
+  if (cosThd > 1) cosThd = 1; else if (cosThd < -1) cosThd = -1;
+  const sinThd = Math.sqrt(1 - cosThd*cosThd);
+  let v;
   switch (type) {
-    case "iso":   return 1;
-    case "hertz": return aSin;
-    case "half":  // |cos((π/2)cos φ) / sin φ|
-      if (aSin < eps) return 0;
-      return Math.abs(Math.cos((Math.PI/2)*cphi) / sphi);
-    case "full":  // |[cos(π cos φ)+1] / sin φ|, max=2 at broadside
-      if (aSin < eps) return 0;
-      return Math.abs((Math.cos(Math.PI*cphi)+1) / sphi);
-    case "threehalf": // |cos((3π/2) cos φ) / sin φ|
-      if (aSin < eps) return 0;
-      return Math.abs(Math.cos((3*Math.PI/2)*cphi) / sphi);
-    default:      return 1;
+    case "iso":   v = 1; break;
+    case "hertz": v = sinThd; break;
+    case "half":
+      v = (sinThd < 1e-7) ? 0 : Math.abs(Math.cos((Math.PI/2)*cosThd) / sinThd);
+      break;
+    case "full":
+      v = (sinThd < 1e-7) ? 0 : Math.abs((Math.cos(Math.PI*cosThd)+1) / sinThd);
+      break;
+    case "threehalf":
+      v = (sinThd < 1e-7) ? 0 : Math.abs(Math.cos((3*Math.PI/2)*cosThd) / sinThd);
+      break;
+    default: v = 1;
   }
+  return v / ELEM_MAX[type];
 }
 
-// cache element-pattern peak (so we can normalize to 1)
-const ELEM_MAX = {};
-function elementMax(type) {
-  if (ELEM_MAX[type] !== undefined) return ELEM_MAX[type];
-  let m = 0;
-  for (let i = 0; i < 7200; i++) {
-    const v = elementPatternRaw((i/7200)*2*Math.PI, type);
-    if (v > m) m = v;
-  }
-  if (m === 0) m = 1;
-  ELEM_MAX[type] = m;
-  return m;
-}
-
-function elementPattern(phi, type, alphaRad) {
-  // rotate pattern by alpha: replace phi with (phi - alpha)
-  return elementPatternRaw(phi - alphaRad, type) / elementMax(type);
-}
-
-function arrayFactor(phi, N, d, betaRad) {
-  // |AF| / N = |sin(N ψ/2) / (N sin(ψ/2))|, ψ = 2π(d/λ) cos φ + β
+function arrayFactorFromCosTheta(cosTheta, N, d, betaRad) {
   if (N <= 1) return 1;
-  const psi = 2*Math.PI*d*Math.cos(phi) + betaRad;
+  const psi = 2*Math.PI*d*cosTheta + betaRad;
   const half = psi / 2;
   const sh = Math.sin(half);
-  if (Math.abs(sh) < 1e-9) return 1; // limit
+  if (Math.abs(sh) < 1e-9) return 1;
   return Math.abs(Math.sin(N*half) / (N*sh));
 }
 
-function patternAt(phi) {
-  const e = elementPattern(phi, state.elemType, state.alpha*Math.PI/180);
-  const af = arrayFactor(phi, state.N, state.d, state.beta*Math.PI/180);
+// Evaluate F at a 3D direction (rx, ry, rz), |r̂| = 1.
+function patternAtDir(rx, ry, rz) {
+  const cosTheta = rz;
+  const af = arrayFactorFromCosTheta(cosTheta, state.N, state.d,
+                                     state.beta*Math.PI/180);
+  const aRad = state.alpha*Math.PI/180;
+  const cosThd = rx*Math.sin(aRad) + rz*Math.cos(aRad); // ny = 0
+  const e = elementFromCos(cosThd, state.elemType);
   return { elem:e, af:af, total:e*af };
 }
 
+// Evaluate F at plot angle ψ in the chosen plane.
+function patternAtPlane(psi, planeKey) {
+  const P = PLANES[planeKey];
+  const c = Math.cos(psi), s = Math.sin(psi);
+  const rx = c*P.u[0] + s*P.v[0];
+  const ry = c*P.u[1] + s*P.v[1];
+  const rz = c*P.u[2] + s*P.v[2];
+  return patternAtDir(rx, ry, rz);
+}
+
+// Backwards-compatible 2D entry point (uses current plane).
+function patternAt(psi) { return patternAtPlane(psi, state.plane); }
+
 /* =====================================================
-   SAMPLED PATTERN (cached for analysis & curves)
+   SAMPLING & ANALYSIS for 2D plot
    ===================================================== */
 const STEPS = 1080;
 const samples = new Array(STEPS+1);
 
 function recomputeSamples() {
   for (let i = 0; i <= STEPS; i++) {
-    const phiDeg = (i/STEPS)*360;
-    const phi = phiDeg*Math.PI/180;
-    const v = patternAt(phi);
-    samples[i] = { phiDeg, phi, ...v };
+    const psiDeg = (i/STEPS)*360;
+    const psi = psiDeg*Math.PI/180;
+    const v = patternAtPlane(psi, state.plane);
+    samples[i] = { psiDeg, psi, ...v };
   }
 }
 
-/* =====================================================
-   PATTERN ANALYSIS (numerical)
-   - main-beam direction(s) = global maxima of total
-   - HPBW around main beam
-   - peak side-lobe level
-   - grating-lobe presence
-   ===================================================== */
 function analyzePattern() {
   let maxV = 0;
   for (let i = 0; i <= STEPS; i++) if (samples[i].total > maxV) maxV = samples[i].total;
   if (maxV < 1e-9) return { mainBeams:[], hpbw:NaN, sllDb:NaN, grating:false, maxV:0 };
-
-  // Find local maxima & minima by 3-point comparison (cyclic)
   const peaks = [];
   for (let i = 0; i < STEPS; i++) {
     const prev = samples[(i-1+STEPS)%STEPS].total;
     const cur  = samples[i].total;
     const next = samples[(i+1)%STEPS].total;
     if (cur >= prev && cur >= next && cur > maxV*1e-3) {
-      peaks.push({ phiDeg:samples[i].phiDeg, val:cur });
+      peaks.push({ psiDeg:samples[i].psiDeg, val:cur });
     }
   }
-
-  // Main beams: peaks within 1% of maxV
-  const mainBeams = peaks.filter(p => p.val >= maxV*0.99)
-                         .map(p => p.phiDeg);
-
-  // Peak side-lobe (excluding main beams)
+  const mainBeams = peaks.filter(p => p.val >= maxV*0.99).map(p => p.psiDeg);
   let sll = 0;
-  for (const p of peaks) {
-    if (p.val < maxV*0.99 && p.val > sll) sll = p.val;
-  }
+  for (const p of peaks) if (p.val < maxV*0.99 && p.val > sll) sll = p.val;
   const sllDb = sll > 0 ? 20*Math.log10(sll/maxV) : NaN;
-
-  // HPBW: scan outward from first main beam in samples (in degrees)
   let hpbw = NaN;
   if (mainBeams.length) {
-    // find sample index closest to first main beam
-    let mb = mainBeams[0];
-    let mbIdx = Math.round((mb/360)*STEPS) % STEPS;
-    const half = maxV / Math.SQRT2; // -3 dB level (in voltage)
-    // scan forward
-    let fwd = 0;
+    const mbIdx = Math.round((mainBeams[0]/360)*STEPS) % STEPS;
+    const half = maxV / Math.SQRT2;
+    let fwd = 0, bwd = 0;
     for (let k = 1; k <= STEPS/2; k++) {
-      const v = samples[(mbIdx+k)%STEPS].total;
-      if (v < half) { fwd = k*(360/STEPS); break; }
+      if (samples[(mbIdx+k)%STEPS].total < half) { fwd = k*(360/STEPS); break; }
     }
-    let bwd = 0;
     for (let k = 1; k <= STEPS/2; k++) {
-      const v = samples[(mbIdx-k+STEPS)%STEPS].total;
-      if (v < half) { bwd = k*(360/STEPS); break; }
+      if (samples[(mbIdx-k+STEPS)%STEPS].total < half) { bwd = k*(360/STEPS); break; }
     }
     if (fwd && bwd) hpbw = fwd + bwd;
   }
-
-  // Grating lobes: more than one main beam in the visible region (excluding the
-  // physical mirror twin from the array's symmetry).
-  // For β=0 there are always two main beams (φ and 360−φ, e.g., 90 & 270 for broadside),
-  // which are the SAME physical direction in 3D (axial symmetry). True grating lobes
-  // appear as additional peaks at near-100% level in distinct cos φ values.
-  // Simpler check: count distinct cos(φ) values among main beams.
   const cosSet = new Set();
   mainBeams.forEach(d => cosSet.add( Math.round(Math.cos(d*Math.PI/180)*1000)/1000 ));
   const grating = cosSet.size > 1;
-
   return { mainBeams, hpbw, sllDb, grating, maxV };
 }
 
 /* =====================================================
-   RENDERING
+   2D POLAR RENDERING (SVG)
    ===================================================== */
 const SVG_NS = "http://www.w3.org/2000/svg";
 const svg = document.getElementById("polar");
 const tooltip = document.getElementById("tooltip");
-const cx = 400, cy = 400, R = 320;
+const cx = 400, cy = 400, R = 300;     // smaller R to leave room for axis labels
 
-// math angle φ (radians) → SVG (x,y).
-// Y is FLIPPED (cy + r·sin) so screen labels match reference: 90° at bottom, 270° at top.
-function polar(phi, r) {
-  return { x: cx + r*Math.cos(phi), y: cy + r*Math.sin(phi) };
+function polar(psi, r) {
+  // y is flipped (cy + r·sin) so screen labels match 0° right, 90° bottom, 270° top
+  return { x: cx + r*Math.cos(psi), y: cy + r*Math.sin(psi) };
 }
 function polarDeg(deg, r) { return polar(deg*Math.PI/180, r); }
 
@@ -464,10 +557,8 @@ function el(name, attrs, text) {
 function clearSvg() { while (svg.firstChild) svg.removeChild(svg.firstChild); }
 
 function drawGrid() {
-  // outer disk (white)
   svg.appendChild(el("circle", { cx, cy, r:R, fill:"#ffffff" }));
   if (!state.showGrid) {
-    // outer ring still
     svg.appendChild(el("circle", { cx, cy, r:R, fill:"none",
       stroke:"#8a96a3", "stroke-width":1.2 }));
     return;
@@ -483,21 +574,15 @@ function drawGrid() {
       "stroke-dasharray": isOuter ? "" : "3,3"
     }));
     if (state.showLabels) {
-      let txt;
-      if (state.dbMode) {
-        const db = state.dbMin*(1 - v);
-        txt = (db === 0 ? "0" : db.toFixed(0)) + " dB";
-      } else {
-        txt = v.toFixed(2);
-      }
-      const t = el("text", {
+      const txt = state.dbMode
+        ? (state.dbMin*(1-v)).toFixed(0) + " dB"
+        : v.toFixed(2);
+      svg.appendChild(el("text", {
         x: cx + r + 4, y: cy + 4,
         "font-size":11, fill:"var(--dim)", "font-family":"monospace"
-      }, txt);
-      svg.appendChild(t);
+      }, txt));
     }
   });
-  // radial spokes every 30°
   for (let a = 0; a < 360; a += 30) {
     const p = polarDeg(a, R);
     svg.appendChild(el("line", {
@@ -510,12 +595,49 @@ function drawGrid() {
 function drawAngleLabels() {
   if (!state.showLabels) return;
   for (let a = 0; a < 360; a += 30) {
-    const p = polarDeg(a, R + 22);
+    if (state.showAxes && (a === 0 || a === 90 || a === 180 || a === 270)) continue;
+    const p = polarDeg(a, R + 18);
     svg.appendChild(el("text", {
       x:p.x, y:p.y, "text-anchor":"middle",
-      "dominant-baseline":"middle", "font-size":12,
-      fill:"var(--text)", "font-family":"sans-serif"
+      "dominant-baseline":"middle", "font-size":11,
+      fill:"var(--dim)", "font-family":"sans-serif"
     }, a + "°"));
+  }
+}
+
+// Axis labels on the four cardinal directions, per current plane.
+function drawAxisLabels() {
+  if (!state.showAxes) return;
+  const P = PLANES[state.plane];
+  const L = P.labels;  // { 0, 90, 180, 270 }
+  const colorFor = (lbl) => {
+    if (lbl.includes("x")) return "var(--axis-x)";
+    if (lbl.includes("y")) return "var(--axis-y)";
+    if (lbl.includes("z")) return "var(--axis-z)";
+    return "var(--text)";
+  };
+  for (const angStr of Object.keys(L)) {
+    const a = parseInt(angStr);
+    const lbl = L[angStr];
+    const col = colorFor(lbl);
+    // arrow: solid line and arrowhead, slightly outside outer ring
+    const tip = polarDeg(a, R + 12);
+    const head = polarDeg(a, R + 6);
+    const baseL = { x: head.x + 5*Math.cos((a+150)*Math.PI/180),
+                    y: head.y + 5*Math.sin((a+150)*Math.PI/180) };
+    const baseR = { x: head.x + 5*Math.cos((a-150)*Math.PI/180),
+                    y: head.y + 5*Math.sin((a-150)*Math.PI/180) };
+    svg.appendChild(el("polygon", {
+      points: `${tip.x.toFixed(1)},${tip.y.toFixed(1)} ${baseL.x.toFixed(1)},${baseL.y.toFixed(1)} ${baseR.x.toFixed(1)},${baseR.y.toFixed(1)}`,
+      fill: col
+    }));
+    // text label
+    const lp = polarDeg(a, R + 32);
+    svg.appendChild(el("text", {
+      x:lp.x, y:lp.y, "text-anchor":"middle",
+      "dominant-baseline":"middle", "font-size":15,
+      fill:col, "font-weight":"700", "font-family":"sans-serif"
+    }, lbl));
   }
 }
 
@@ -523,7 +645,7 @@ function curvePath(field) {
   let s = "";
   for (let i = 0; i <= STEPS; i++) {
     const r = magToRadius(samples[i][field]);
-    const p = polarDeg(samples[i].phiDeg, r);
+    const p = polarDeg(samples[i].psiDeg, r);
     s += (i === 0 ? "M" : "L") + p.x.toFixed(2) + "," + p.y.toFixed(2) + " ";
   }
   return s;
@@ -558,15 +680,12 @@ function drawCurves() {
 function drawBeamArrow(analysis) {
   if (!state.showBeam || !analysis.mainBeams.length) return;
   for (const mbDeg of analysis.mainBeams) {
-    const r = R + 6;
-    const p = polarDeg(mbDeg, r);
-    // small triangle pointing inward
     const phi = mbDeg*Math.PI/180;
-    const pa = polarDeg(mbDeg, r);
+    const pa = polarDeg(mbDeg, R+4);
     const pb = { x: pa.x + 9*Math.cos(phi+2.6), y: pa.y + 9*Math.sin(phi+2.6) };
     const pc = { x: pa.x + 9*Math.cos(phi-2.6), y: pa.y + 9*Math.sin(phi-2.6) };
     svg.appendChild(el("polygon", {
-      points: `${pa.x},${pa.y} ${pb.x},${pb.y} ${pc.x},${pc.y}`,
+      points: `${pa.x.toFixed(1)},${pa.y.toFixed(1)} ${pb.x.toFixed(1)},${pb.y.toFixed(1)} ${pc.x.toFixed(1)},${pc.y.toFixed(1)}`,
       fill:"var(--total)", opacity:0.85
     }));
   }
@@ -574,19 +693,12 @@ function drawBeamArrow(analysis) {
 
 function drawArrayLayout() {
   if (!state.showElements) return;
-  // small horizontal strip at bottom of the plot, drawn relative to array (z) axis
-  // along the 0°-180° line through the centre, with element dots, plus an
-  // arrow indicating tilted dipole orientation α.
-  const N = state.N;
-  const d = state.d;
-  const total = (N-1)*d; // wavelengths
+  const N = state.N, d = state.d;
+  const total = (N-1)*d;
   const stripY = 770;
-  const stripPad = 80;
-  const stripW = 800 - 2*stripPad;
+  const stripPad = 80, stripW = 800 - 2*stripPad;
   const scale = total > 0 ? Math.min(stripW/total, 60) : 0;
   const start = 400 - (total*scale)/2;
-
-  // background
   svg.appendChild(el("rect", {
     x:stripPad-10, y:stripY-22, width:stripW+20, height:40,
     fill:"#fafbfc", stroke:"var(--border)", "stroke-width":1, rx:6
@@ -594,19 +706,14 @@ function drawArrayLayout() {
   svg.appendChild(el("text", {
     x:stripPad-6, y:stripY-8, "font-size":10, fill:"var(--dim)"
   }, `Array layout (along z-axis) — N=${N}, d=${d.toFixed(2)}λ`));
-
   for (let i = 0; i < N; i++) {
     const x = start + i*d*scale;
-    // element dot
     svg.appendChild(el("circle", {
       cx:x, cy:stripY+6, r:5,
       fill:"var(--accent)", stroke:"var(--accent-dark)", "stroke-width":1
     }));
-    // tilted dipole indicator (small line through dot at angle α from z-axis)
     const aRad = state.alpha*Math.PI/180;
-    // z-axis is horizontal in the strip; α measured from z (CCW)
     const len = 9;
-    // tilting "in plane" — show as a 2D line; sign flipped for typical visual
     const dx = len*Math.cos(aRad);
     const dy = -len*Math.sin(aRad);
     svg.appendChild(el("line", {
@@ -638,10 +745,11 @@ function drawMarker(angleDeg, kind) {
   }));
 }
 
-function render() {
+function render2D() {
   clearSvg();
   drawGrid();
   drawAngleLabels();
+  drawAxisLabels();
   drawCurves();
   const analysis = analyzePattern();
   drawBeamArrow(analysis);
@@ -652,6 +760,206 @@ function render() {
 }
 
 /* =====================================================
+   3D RENDERING (Three.js)
+   ===================================================== */
+let three = null;   // { renderer, scene, camera, controls, mesh, axesGroup }
+let animating = false;
+
+function colormap(t) {
+  // 5-stop viridis approximation; t in [0,1]
+  t = Math.max(0, Math.min(1, t));
+  const stops = [
+    [0.267, 0.005, 0.329],
+    [0.230, 0.298, 0.554],
+    [0.128, 0.567, 0.551],
+    [0.369, 0.788, 0.382],
+    [0.993, 0.906, 0.144]
+  ];
+  const f = t * (stops.length - 1);
+  const i = Math.floor(f);
+  const k = f - i;
+  if (i >= stops.length - 1) return stops[stops.length - 1];
+  const a = stops[i], b = stops[i+1];
+  return [a[0]*(1-k)+b[0]*k, a[1]*(1-k)+b[1]*k, a[2]*(1-k)+b[2]*k];
+}
+
+function makeTextSprite(text, hexColor) {
+  const c = document.createElement("canvas");
+  const size = 256;
+  c.width = size; c.height = size/2;
+  const ctx = c.getContext("2d");
+  ctx.fillStyle = "rgba(255,255,255,0.0)";
+  ctx.fillRect(0,0,c.width,c.height);
+  ctx.font = "bold 80px sans-serif";
+  ctx.fillStyle = hexColor;
+  ctx.strokeStyle = "rgba(255,255,255,0.85)";
+  ctx.lineWidth = 8;
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.strokeText(text, c.width/2, c.height/2);
+  ctx.fillText(text, c.width/2, c.height/2);
+  const tex = new THREE.CanvasTexture(c);
+  tex.minFilter = THREE.LinearFilter;
+  const mat = new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true });
+  const sp = new THREE.Sprite(mat);
+  sp.scale.set(0.42, 0.21, 1);
+  return sp;
+}
+
+function buildAxes(group) {
+  while (group.children.length) {
+    const ch = group.children[0]; group.remove(ch);
+    if (ch.geometry) ch.geometry.dispose();
+    if (ch.material) ch.material.dispose && ch.material.dispose();
+  }
+  const len = 1.4;
+  const make = (color, dir, label, hex) => {
+    const mat = new THREE.LineBasicMaterial({ color, linewidth:2 });
+    const pts = [
+      new THREE.Vector3(0,0,0),
+      new THREE.Vector3(dir[0]*len, dir[1]*len, dir[2]*len)
+    ];
+    const geom = new THREE.BufferGeometry().setFromPoints(pts);
+    group.add(new THREE.Line(geom, mat));
+    const sp = makeTextSprite(label, hex);
+    sp.position.set(dir[0]*len*1.12, dir[1]*len*1.12, dir[2]*len*1.12);
+    group.add(sp);
+  };
+  make(0xc81e1e, [1,0,0], "+x", "#c81e1e");
+  make(0x1f7a3f, [0,1,0], "+y", "#1f7a3f");
+  make(0x2e6cb8, [0,0,1], "+z (array)", "#2e6cb8");
+}
+
+function buildPatternMesh(group, kind) {
+  // remove existing mesh
+  const old = group.getObjectByName("patternMesh");
+  if (old) {
+    group.remove(old);
+    old.geometry.dispose();
+    old.material.dispose();
+  }
+  const tSeg = 80, pSeg = 160;
+  const nVerts = (tSeg+1) * (pSeg+1);
+  const positions = new Float32Array(nVerts*3);
+  const colors    = new Float32Array(nVerts*3);
+  const mags      = new Float32Array(nVerts);
+  let maxMag = 0;
+  for (let i = 0; i <= tSeg; i++) {
+    const theta = (i/tSeg) * Math.PI;
+    const st = Math.sin(theta), ct = Math.cos(theta);
+    for (let j = 0; j <= pSeg; j++) {
+      const phi = (j/pSeg) * 2 * Math.PI;
+      const rx = st*Math.cos(phi), ry = st*Math.sin(phi), rz = ct;
+      const v = patternAtDir(rx, ry, rz);
+      const m = v[kind];
+      const idx = i*(pSeg+1) + j;
+      mags[idx] = m;
+      if (m > maxMag) maxMag = m;
+    }
+  }
+  if (maxMag < 1e-9) maxMag = 1;
+  for (let i = 0; i <= tSeg; i++) {
+    const theta = (i/tSeg) * Math.PI;
+    const st = Math.sin(theta), ct = Math.cos(theta);
+    for (let j = 0; j <= pSeg; j++) {
+      const phi = (j/pSeg) * 2 * Math.PI;
+      const rx = st*Math.cos(phi), ry = st*Math.sin(phi), rz = ct;
+      const idx = i*(pSeg+1) + j;
+      const m = mags[idx];
+      const r = m;  // raw magnitude (already in [0, ~1])
+      positions[idx*3+0] = r*rx;
+      positions[idx*3+1] = r*ry;
+      positions[idx*3+2] = r*rz;
+      const col = colormap(m/maxMag);
+      colors[idx*3+0] = col[0];
+      colors[idx*3+1] = col[1];
+      colors[idx*3+2] = col[2];
+    }
+  }
+  const indices = [];
+  for (let i = 0; i < tSeg; i++) {
+    for (let j = 0; j < pSeg; j++) {
+      const a = i*(pSeg+1) + j;
+      const b = a + (pSeg+1);
+      const c = a + 1;
+      const d = b + 1;
+      indices.push(a, b, c, b, d, c);
+    }
+  }
+  const geom = new THREE.BufferGeometry();
+  geom.setIndex(indices);
+  geom.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+  geom.setAttribute("color",    new THREE.BufferAttribute(colors, 3));
+  geom.computeVertexNormals();
+  const mat = new THREE.MeshLambertMaterial({
+    vertexColors: true, side: THREE.DoubleSide
+  });
+  const mesh = new THREE.Mesh(geom, mat);
+  mesh.name = "patternMesh";
+  group.add(mesh);
+}
+
+function init3D() {
+  if (typeof THREE === "undefined") {
+    console.warn("Three.js not loaded — 3D mode unavailable.");
+    return;
+  }
+  const canvas = document.getElementById("canvas-3d");
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias:true });
+  renderer.setPixelRatio(window.devicePixelRatio || 1);
+  renderer.setClearColor(0xffffff, 1);
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(45, 1, 0.01, 100);
+  camera.position.set(2.4, 2.0, 2.4);
+  camera.lookAt(0, 0, 0);
+  camera.up.set(0, 0, 1);  // z-up so the array axis is "up" in 3D
+  const controls = new THREE.OrbitControls(camera, canvas);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.08;
+  controls.minDistance = 1.0;
+  controls.maxDistance = 8.0;
+
+  scene.add(new THREE.AmbientLight(0xffffff, 0.55));
+  const d1 = new THREE.DirectionalLight(0xffffff, 0.6);
+  d1.position.set(3, 4, 3); scene.add(d1);
+  const d2 = new THREE.DirectionalLight(0xffffff, 0.25);
+  d2.position.set(-3, -2, -1); scene.add(d2);
+
+  const axesGroup = new THREE.Group();
+  scene.add(axesGroup);
+  buildAxes(axesGroup);
+
+  const meshGroup = new THREE.Group();
+  scene.add(meshGroup);
+
+  three = { renderer, scene, camera, controls, axesGroup, meshGroup };
+
+  // Resize handling
+  const resize = () => {
+    const wrap = document.getElementById("plot-3d-wrap");
+    const w = wrap.clientWidth, h = wrap.clientHeight;
+    renderer.setSize(w, h, false);
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+  };
+  resize();
+  new ResizeObserver(resize).observe(document.getElementById("plot-3d-wrap"));
+}
+
+function rebuild3DMesh() {
+  if (!three) return;
+  buildPatternMesh(three.meshGroup, state.pattern3D);
+}
+
+function animate() {
+  if (!animating || !three) return;
+  requestAnimationFrame(animate);
+  three.controls.update();
+  three.renderer.render(three.scene, three.camera);
+}
+function startAnimation() { if (!animating) { animating = true; animate(); } }
+function stopAnimation()  { animating = false; }
+
+/* =====================================================
    UI SYNC / TEXT
    ===================================================== */
 function syncStats() {
@@ -660,41 +968,51 @@ function syncStats() {
   document.getElementById("stat-beta").textContent = state.beta + "°";
   document.getElementById("stat-alpha").textContent = state.alpha + "°";
   document.getElementById("stat-type").textContent = ELEMENT_NAMES[state.elemType];
+  document.getElementById("stat-view").textContent =
+    state.viewMode === "3d" ? "3D / sphere" : ("2D / " + state.plane);
   document.getElementById("lbl-N").textContent = state.N;
   document.getElementById("lbl-d").textContent = state.d.toFixed(2);
   document.getElementById("lbl-beta").textContent = state.beta + "°";
   document.getElementById("lbl-alpha").textContent = state.alpha + "°";
   document.getElementById("lbl-dbmin").textContent = state.dbMin;
+  document.getElementById("axis-note").textContent =
+    state.viewMode === "3d"
+      ? "3D surface · radius = |F(θ,φ)| · color = magnitude"
+      : "Plane: " + state.plane + " · " + PLANES[state.plane].note;
 }
 
 function updateFormula() {
   let elem;
   switch (state.elemType) {
-    case "iso":       elem = "E(φ) = 1"; break;
-    case "hertz":     elem = "E(φ) = |sin(φ − α)|"; break;
-    case "half":      elem = "E(φ) = |cos((π/2)·cos(φ−α)) / sin(φ−α)|"; break;
-    case "full":      elem = "E(φ) ∝ |[cos(π·cos(φ−α)) + 1] / sin(φ−α)|"; break;
-    case "threehalf": elem = "E(φ) ∝ |cos((3π/2)·cos(φ−α)) / sin(φ−α)|"; break;
+    case "iso":       elem = "E = 1"; break;
+    case "hertz":     elem = "E ∝ |sin θ_d|"; break;
+    case "half":      elem = "E ∝ |cos((π/2)cos θ_d) / sin θ_d|"; break;
+    case "full":      elem = "E ∝ |[cos(π·cos θ_d)+1] / sin θ_d|"; break;
+    case "threehalf": elem = "E ∝ |cos((3π/2)·cos θ_d) / sin θ_d|"; break;
   }
   document.getElementById("formula").innerHTML =
-    `<b>F(φ) = E(φ) · AF(φ)</b> &nbsp; · &nbsp; ` + elem +
-    ` &nbsp; · &nbsp; |AF| = |sin(Nψ/2) / (N·sin(ψ/2))|, ` +
-    `&nbsp; ψ = 2π(d/λ)·cos(φ) + β`;
+    `<b>F = E · AF</b> · cos θ_d = r̂·n̂  (n̂ tilted by α from ẑ) · ` +
+    elem +
+    ` · |AF| = |sin(Nψ/2) / (N·sin(ψ/2))|, ψ = 2π(d/λ)·cos θ + β · θ measured from ẑ (array axis)`;
 }
 
 function updateClickInfo() {
   const el = document.getElementById("click-info");
+  if (state.viewMode === "3d") {
+    el.innerHTML = '<div class="row"><span>(disabled in 3D mode)</span></div>';
+    return;
+  }
   if (state.clickAngle === null) {
     el.innerHTML = '<div class="row"><span>Click on plot to inspect.</span></div>';
     return;
   }
-  const phi = state.clickAngle*Math.PI/180;
-  const v = patternAt(phi);
+  const psi = state.clickAngle*Math.PI/180;
+  const v = patternAt(psi);
   const dbT = v.total>1e-9 ? (20*Math.log10(v.total)).toFixed(2) : "−∞";
   const dbA = v.af>1e-9    ? (20*Math.log10(v.af)).toFixed(2)    : "−∞";
   const dbE = v.elem>1e-9  ? (20*Math.log10(v.elem)).toFixed(2)  : "−∞";
   el.innerHTML = `
-    <div class="row"><span>φ</span><span>${state.clickAngle.toFixed(1)}°</span></div>
+    <div class="row"><span>ψ</span><span>${state.clickAngle.toFixed(1)}°</span></div>
     <div class="row"><span>Element</span><span>${v.elem.toFixed(4)} (${dbE} dB)</span></div>
     <div class="row"><span>Array Factor</span><span>${v.af.toFixed(4)} (${dbA} dB)</span></div>
     <div class="row"><span>Total</span><span>${v.total.toFixed(4)} (${dbT} dB)</span></div>
@@ -704,7 +1022,7 @@ function updateClickInfo() {
 function updateAnalysisPanel(a) {
   const el = document.getElementById("analysis");
   if (!a.mainBeams.length) {
-    el.innerHTML = '<div class="row"><span>Pattern is zero everywhere.</span></div>';
+    el.innerHTML = '<div class="row"><span>Pattern is zero in this plane.</span></div>';
     return;
   }
   const mbStr = a.mainBeams.map(d => d.toFixed(1) + "°").join(", ");
@@ -714,7 +1032,7 @@ function updateAnalysisPanel(a) {
     ? '<span class="warn">YES — grating lobes present</span>'
     : "no";
   el.innerHTML = `
-    <div class="row"><span>Main beam(s)</span><span>${mbStr}</span></div>
+    <div class="row"><span>Main beam(s) ψ</span><span>${mbStr}</span></div>
     <div class="row"><span>HPBW (≈)</span><span>${hpbwStr}</span></div>
     <div class="row"><span>Peak SLL</span><span>${sllStr}</span></div>
     <div class="row"><span>Grating lobe</span><span>${gratingStr}</span></div>
@@ -724,13 +1042,17 @@ function updateAnalysisPanel(a) {
 function refresh() {
   syncStats();
   updateFormula();
-  recomputeSamples();
-  render();
+  if (state.viewMode === "2d") {
+    recomputeSamples();
+    render2D();
+  } else {
+    rebuild3DMesh();
+  }
   updateClickInfo();
 }
 
 /* =====================================================
-   INTERACTION
+   2D INTERACTION
    ===================================================== */
 function svgFromEvent(e) {
   const rect = svg.getBoundingClientRect();
@@ -738,7 +1060,6 @@ function svgFromEvent(e) {
   const sy = (e.clientY - rect.top)  * (800/rect.height);
   return { sx, sy, dx: sx-cx, dy: sy-cy };
 }
-
 function angleFromEvent(e) {
   const { dx, dy } = svgFromEvent(e);
   const r = Math.hypot(dx, dy);
@@ -747,27 +1068,21 @@ function angleFromEvent(e) {
   if (a < 0) a += 360;
   return a;
 }
-
 function setHoverTooltip(e, angleDeg) {
-  if (angleDeg === null) {
-    tooltip.style.display = "none";
-    return;
-  }
-  const phi = angleDeg*Math.PI/180;
-  const v = patternAt(phi);
+  if (angleDeg === null) { tooltip.style.display = "none"; return; }
+  const psi = angleDeg*Math.PI/180;
+  const v = patternAt(psi);
   tooltip.innerHTML =
-    `φ = ${angleDeg.toFixed(1)}° &nbsp; ` +
+    `ψ = ${angleDeg.toFixed(1)}° &nbsp; ` +
     `E=${v.elem.toFixed(3)} &nbsp; AF=${v.af.toFixed(3)} &nbsp; ` +
     `<b>F=${v.total.toFixed(3)}</b>`;
   tooltip.style.display = "block";
-  const rect = svg.getBoundingClientRect();
   const wrapRect = svg.parentElement.getBoundingClientRect();
   let tx = e.clientX - wrapRect.left + 12;
   let ty = e.clientY - wrapRect.top + 12;
-  // Keep on screen
   const tipW = tooltip.offsetWidth, tipH = tooltip.offsetHeight;
-  if (tx + tipW > wrapRect.width) tx = e.clientX - wrapRect.left - tipW - 12;
-  if (ty + tipH > wrapRect.height) ty = e.clientY - wrapRect.top - tipH - 12;
+  if (tx + tipW > wrapRect.width)  tx = e.clientX - wrapRect.left - tipW - 12;
+  if (ty + tipH > wrapRect.height) ty = e.clientY - wrapRect.top  - tipH - 12;
   tooltip.style.left = tx + "px";
   tooltip.style.top  = ty + "px";
 }
@@ -785,27 +1100,22 @@ svg.addEventListener("mousemove", e => {
     state.clickAngle = a;
     state.hoverAngle = null;
     setHoverTooltip(e, a);
-    refresh();
-    return;
+    refresh(); return;
   }
   state.hoverAngle = a;
   setHoverTooltip(e, a);
-  render();  // light re-render only (samples unchanged)
+  render2D();
   updateClickInfo();
 });
 svg.addEventListener("mouseleave", () => {
   state.hoverAngle = null;
   state.dragging = false;
   tooltip.style.display = "none";
-  render();
+  render2D();
 });
 window.addEventListener("mouseup", () => { state.dragging = false; });
-svg.addEventListener("dblclick", () => {
-  state.clickAngle = null;
-  refresh();
-});
+svg.addEventListener("dblclick", () => { state.clickAngle = null; refresh(); });
 
-// Touch: simple — treat first touch as drag
 svg.addEventListener("touchstart", e => {
   if (!e.touches.length) return;
   const t = e.touches[0];
@@ -813,8 +1123,7 @@ svg.addEventListener("touchstart", e => {
   if (a === null) return;
   state.dragging = true;
   state.clickAngle = a;
-  refresh();
-  e.preventDefault();
+  refresh(); e.preventDefault();
 }, { passive:false });
 svg.addEventListener("touchmove", e => {
   if (!state.dragging || !e.touches.length) return;
@@ -822,12 +1131,10 @@ svg.addEventListener("touchmove", e => {
   const a = angleFromEvent({ clientX:t.clientX, clientY:t.clientY });
   if (a === null) return;
   state.clickAngle = a;
-  refresh();
-  e.preventDefault();
+  refresh(); e.preventDefault();
 }, { passive:false });
 svg.addEventListener("touchend", () => { state.dragging = false; });
 
-// Keyboard nudging
 svg.addEventListener("keydown", e => {
   if (state.clickAngle === null) return;
   const step = e.shiftKey ? 5 : 1;
@@ -860,36 +1167,44 @@ document.getElementById("d").addEventListener("input", e => {
 document.getElementById("beta").addEventListener("input", e => {
   state.beta = parseInt(e.target.value); refresh();
 });
+document.getElementById("plane").addEventListener("change", e => {
+  state.plane = e.target.value; refresh();
+});
+document.getElementById("pattern-3d").addEventListener("change", e => {
+  state.pattern3D = e.target.value; refresh();
+});
 
-// Beam steering: β = -k·d·cos(φ₀)
+// Beam steering: β = -k·d·cos(θ₀) where θ₀ is angle from z-axis.
 document.getElementById("scan-apply").addEventListener("click", () => {
-  const phi0 = parseFloat(document.getElementById("scan-target").value);
-  if (!isFinite(phi0)) return;
-  let beta = -360 * state.d * Math.cos(phi0*Math.PI/180); // degrees
-  // clamp into [-180, 180] (wrap modulo 360)
+  const theta0 = parseFloat(document.getElementById("scan-target").value);
+  if (!isFinite(theta0)) return;
+  let beta = -360 * state.d * Math.cos(theta0*Math.PI/180);
   beta = ((beta + 180) % 360 + 360) % 360 - 180;
   state.beta = Math.round(beta);
   document.getElementById("beta").value = state.beta;
   refresh();
 });
 
-// Display toggles
 document.getElementById("show-grid").addEventListener("change", e => {
-  state.showGrid = e.target.checked; render();
+  state.showGrid = e.target.checked; if (state.viewMode==="2d") render2D();
 });
 document.getElementById("show-labels").addEventListener("change", e => {
-  state.showLabels = e.target.checked; render();
+  state.showLabels = e.target.checked; if (state.viewMode==="2d") render2D();
+});
+document.getElementById("show-axes").addEventListener("change", e => {
+  state.showAxes = e.target.checked; if (state.viewMode==="2d") render2D();
+  if (three) three.axesGroup.visible = state.showAxes;
 });
 document.getElementById("show-elements").addEventListener("change", e => {
-  state.showElements = e.target.checked; render();
+  state.showElements = e.target.checked; if (state.viewMode==="2d") render2D();
 });
 document.getElementById("show-beam").addEventListener("change", e => {
-  state.showBeam = e.target.checked; render();
+  state.showBeam = e.target.checked; if (state.viewMode==="2d") render2D();
 });
 document.getElementById("db-mode").addEventListener("change", e => {
   state.dbMode = e.target.checked;
   document.getElementById("db-min-field").style.display = state.dbMode ? "" : "none";
-  refresh();
+  if (state.viewMode==="2d") refresh();
 });
 document.getElementById("db-min").addEventListener("input", e => {
   state.dbMin = parseInt(e.target.value); refresh();
@@ -900,10 +1215,8 @@ document.querySelectorAll("button[data-preset]").forEach(btn => {
   btn.addEventListener("click", () => {
     const p = btn.dataset.preset;
     switch (p) {
-      case "broadside":
-        state.beta = 0; break;
+      case "broadside":    state.beta = 0; break;
       case "endfire-fwd": {
-        // φ₀ = 0  (along +z)  → β = -k·d·cos(0) = -2π d/λ
         let b = -360 * state.d;
         b = ((b+180)%360+360)%360 - 180;
         state.beta = Math.round(b); break;
@@ -914,7 +1227,6 @@ document.querySelectorAll("button[data-preset]").forEach(btn => {
         state.beta = Math.round(b); break;
       }
       case "hw": {
-        // Hansen–Woodyard: β = -(kd + π/N)
         let b = -360*state.d - 180/state.N;
         b = ((b+180)%360+360)%360 - 180;
         state.beta = Math.round(b); break;
@@ -923,14 +1235,18 @@ document.querySelectorAll("button[data-preset]").forEach(btn => {
         state.N=2; state.d=0.5; state.beta=0; state.alpha=0;
         state.elemType="hertz";
         state.dbMode=false; state.dbMin=-40;
-        state.showGrid=true; state.showLabels=true;
+        state.showGrid=true; state.showLabels=true; state.showAxes=true;
         state.showElements=true; state.showBeam=true;
         state.visible={total:true,af:true,elem:true};
         state.clickAngle=null; state.hoverAngle=null;
+        state.plane="xz"; state.pattern3D="total";
         document.getElementById("elem-type").value="hertz";
         document.getElementById("alpha").value=0;
+        document.getElementById("plane").value="xz";
+        document.getElementById("pattern-3d").value="total";
         document.getElementById("show-grid").checked=true;
         document.getElementById("show-labels").checked=true;
+        document.getElementById("show-axes").checked=true;
         document.getElementById("show-elements").checked=true;
         document.getElementById("show-beam").checked=true;
         document.getElementById("db-mode").checked=false;
@@ -940,6 +1256,7 @@ document.querySelectorAll("button[data-preset]").forEach(btn => {
         document.getElementById("t-af").checked=true;
         document.getElementById("t-elem").checked=true;
         document.querySelectorAll(".legend-item").forEach(li => li.classList.remove("disabled"));
+        if (three) three.axesGroup.visible = true;
         break;
     }
     document.getElementById("N").value = state.N;
@@ -949,7 +1266,7 @@ document.querySelectorAll("button[data-preset]").forEach(btn => {
   });
 });
 
-// Pattern visibility — synced between toggle switches and legend clicks
+// Pattern visibility (2D curves)
 function setCurveVisible(curve, visible) {
   state.visible[curve] = visible;
   const cb = document.getElementById("t-" + curve);
@@ -957,22 +1274,43 @@ function setCurveVisible(curve, visible) {
   document.querySelectorAll(`.legend-item[data-curve="${curve}"]`).forEach(li => {
     li.classList.toggle("disabled", !visible);
   });
-  render();
+  if (state.viewMode==="2d") render2D();
 }
-
-document.getElementById("t-total").addEventListener("change", e =>
-  setCurveVisible("total", e.target.checked));
-document.getElementById("t-af").addEventListener("change", e =>
-  setCurveVisible("af", e.target.checked));
-document.getElementById("t-elem").addEventListener("change", e =>
-  setCurveVisible("elem", e.target.checked));
-
+document.getElementById("t-total").addEventListener("change", e => setCurveVisible("total", e.target.checked));
+document.getElementById("t-af").addEventListener("change",    e => setCurveVisible("af",    e.target.checked));
+document.getElementById("t-elem").addEventListener("change",  e => setCurveVisible("elem",  e.target.checked));
 document.querySelectorAll(".legend-item").forEach(li => {
   li.addEventListener("click", () => {
     const c = li.dataset.curve;
     setCurveVisible(c, !state.visible[c]);
   });
 });
+
+/* =====================================================
+   VIEW SWITCHER
+   ===================================================== */
+function setViewMode(mode) {
+  if (mode === "3d" && typeof THREE === "undefined") {
+    alert("3D mode needs Three.js, which is fetched from unpkg.com. Please check your internet connection and try again.");
+    return;
+  }
+  state.viewMode = mode;
+  document.getElementById("view-2d").classList.toggle("active", mode==="2d");
+  document.getElementById("view-3d").classList.toggle("active", mode==="3d");
+  document.getElementById("plot-2d-wrap").style.display = (mode==="2d") ? "" : "none";
+  document.getElementById("plot-3d-wrap").style.display = (mode==="3d") ? "" : "none";
+  document.getElementById("pattern-3d-field").style.display = (mode==="3d") ? "" : "none";
+  if (mode === "3d") {
+    if (!three) init3D();
+    rebuild3DMesh();
+    startAnimation();
+  } else {
+    stopAnimation();
+  }
+  refresh();
+}
+document.getElementById("view-2d").addEventListener("click", () => setViewMode("2d"));
+document.getElementById("view-3d").addEventListener("click", () => setViewMode("3d"));
 
 // First render
 refresh();
