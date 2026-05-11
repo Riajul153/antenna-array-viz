@@ -11,8 +11,10 @@
   --text:#1a2533; --dim:#5a6776; --accent:#1f7a6b; --accent-dark:#155a4f;
   --total:#c81e1e; --af:#1f7a3f; --element:#2e6cb8;
   --grid:#c8cfd6; --grid-bold:#8a96a3;
-  --warn:#c97a14;
+  --warn:#c97a14; --good:#1f7a3f; --err:#c81e1e;
   --axis-x:#c81e1e; --axis-y:#1f7a3f; --axis-z:#2e6cb8;
+  --bar:#2e6cb8; --bar-neg:#c81e1e;
+  --code-bg:#1a2533; --code-fg:#e6edf3; --code-kw:#79b8ff;
 }
 html,body{height:100%}
 body{
@@ -31,14 +33,19 @@ body{
   color:var(--dim);font-weight:600}
 .stat span{display:block;font-family:"Consolas","Courier New",monospace;
   font-size:0.92rem;font-weight:600;color:var(--text);margin-top:2px}
-.main{display:grid;grid-template-columns:340px 1fr;min-height:760px}
+.main{display:grid;grid-template-columns:360px 1fr;min-height:760px}
 @media (max-width:980px){.main{grid-template-columns:1fr}}
 .controls{padding:18px;background:#fafbfc;border-right:1px solid var(--border);
   overflow-y:auto;max-height:calc(100vh - 80px)}
 .group{margin-bottom:18px}
 .group h3{font-size:0.74rem;letter-spacing:0.1em;text-transform:uppercase;
   color:var(--accent);margin-bottom:8px;font-weight:700;
-  border-bottom:1px solid var(--border);padding-bottom:4px}
+  border-bottom:1px solid var(--border);padding-bottom:4px;
+  display:flex;align-items:center;justify-content:space-between;gap:6px}
+.group h3 .badge{font-size:0.6rem;letter-spacing:0.05em;padding:2px 6px;
+  background:var(--accent);color:#fff;border-radius:10px;font-weight:600;
+  text-transform:none}
+.group h3 .badge.warn{background:var(--warn)}
 .field{margin-bottom:10px}
 .field label{display:flex;justify-content:space-between;
   font-size:0.83rem;margin-bottom:5px}
@@ -76,6 +83,8 @@ button:active{transform:translateY(1px)}
 button.full{grid-column:span 2}
 button.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
 button.primary:hover{background:var(--accent-dark);border-color:var(--accent-dark)}
+button.danger{background:var(--err);color:#fff;border-color:var(--err)}
+button.danger:hover{background:#a01818;border-color:#a01818}
 .view-toggle{display:flex;gap:0;margin-bottom:10px;width:100%;max-width:760px;
   border:1px solid var(--border);border-radius:8px;overflow:hidden;background:#fff}
 .view-toggle button{flex:1;border:0;border-radius:0;padding:9px 12px;
@@ -133,6 +142,58 @@ canvas#canvas-3d:active{cursor:grabbing}
   color:var(--text);background:#f0f3f5;padding:9px 12px;border-radius:6px;
   margin-top:10px;width:100%;max-width:760px;line-height:1.5}
 .formula b{font-family:inherit;color:var(--accent-dark)}
+.dist-bars{width:100%;height:90px;background:#fff;border:1px solid var(--border);
+  border-radius:6px;padding:6px;position:relative}
+.dist-bars svg{width:100%;height:100%;display:block}
+.dist-bars .bar-label{font-size:0.66rem;fill:var(--dim);font-family:monospace}
+.dist-bars-title{font-size:0.7rem;color:var(--dim);font-family:monospace;
+  margin-bottom:3px;display:flex;justify-content:space-between}
+.script-panel{width:100%;max-width:760px;margin-top:10px;
+  background:#fff;border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.script-head{display:flex;align-items:center;justify-content:space-between;
+  padding:8px 12px;background:#f0f3f5;border-bottom:1px solid var(--border);
+  font-size:0.86rem;font-weight:600;color:var(--text);cursor:pointer;user-select:none}
+.script-head .left{display:flex;align-items:center;gap:8px}
+.script-head .py-status{font-size:0.74rem;color:var(--dim);font-family:monospace;
+  font-weight:400}
+.script-head .py-status.loading{color:var(--warn)}
+.script-head .py-status.ready{color:var(--good)}
+.script-head .py-status.err{color:var(--err)}
+.script-body{padding:10px 12px;display:none;background:#fbfcfd}
+.script-body.open{display:block}
+.script-toolbar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;
+  align-items:center}
+.script-toolbar select{padding:5px 8px;border:1px solid var(--border);
+  border-radius:5px;background:#fff;font-size:0.78rem}
+.script-toolbar .spacer{flex:1}
+.script-editor{width:100%;min-height:280px;max-height:520px;resize:vertical;
+  background:var(--code-bg);color:var(--code-fg);
+  font-family:"Consolas","Monaco","Courier New",monospace;
+  font-size:0.82rem;line-height:1.45;
+  border:1px solid #0c1420;border-radius:6px;padding:10px;
+  outline:none;tab-size:4;white-space:pre;overflow:auto}
+.script-editor:focus{box-shadow:inset 0 0 0 1px var(--accent)}
+.script-console{margin-top:8px;background:#0d1320;color:#cbd5e1;
+  font-family:"Consolas","Monaco","Courier New",monospace;
+  font-size:0.78rem;line-height:1.4;
+  border:1px solid #0c1420;border-radius:6px;padding:8px 10px;
+  min-height:60px;max-height:200px;overflow:auto;white-space:pre-wrap}
+.script-console .ok{color:#7ee787}
+.script-console .err{color:#ff7b72}
+.script-console .info{color:#79b8ff}
+.script-console .warn{color:#d29922}
+.help-popup{display:none;position:absolute;background:#fff;border:1px solid var(--border);
+  border-radius:8px;padding:12px 14px;box-shadow:0 6px 22px rgba(0,0,0,0.18);
+  max-width:520px;font-size:0.82rem;line-height:1.5;z-index:100;color:var(--text)}
+.help-popup.open{display:block}
+.help-popup code{font-family:"Consolas","Monaco","Courier New",monospace;
+  font-size:0.78rem;background:#f0f3f5;padding:1px 4px;border-radius:3px;
+  color:var(--accent-dark)}
+.help-popup h4{font-size:0.82rem;color:var(--accent);margin:8px 0 4px;
+  letter-spacing:0.05em;text-transform:uppercase}
+.help-popup pre{font-family:"Consolas","Monaco","Courier New",monospace;
+  font-size:0.74rem;background:var(--code-bg);color:var(--code-fg);
+  padding:8px 10px;border-radius:5px;overflow:auto;margin:4px 0 8px}
 </style>
 <script src="https://unpkg.com/three@0.147.0/build/three.min.js"></script>
 <script src="https://unpkg.com/three@0.147.0/examples/js/controls/OrbitControls.js"></script>
@@ -145,8 +206,8 @@ canvas#canvas-3d:active{cursor:grabbing}
       <div class="stat"><label>ELEMENTS</label><span id="stat-N">2</span></div>
       <div class="stat"><label>SPACING</label><span id="stat-d">0.50 λ</span></div>
       <div class="stat"><label>PHASE β</label><span id="stat-beta">0°</span></div>
-      <div class="stat"><label>ORIENT α</label><span id="stat-alpha">0°</span></div>
-      <div class="stat"><label>TYPE</label><span id="stat-type">Hertzian Dipole</span></div>
+      <div class="stat"><label>AMPLITUDE</label><span id="stat-amp">Uniform</span></div>
+      <div class="stat"><label>ELEMENT</label><span id="stat-type">Hertzian</span></div>
       <div class="stat"><label>VIEW</label><span id="stat-view">2D / xz</span></div>
     </div>
   </header>
@@ -154,16 +215,35 @@ canvas#canvas-3d:active{cursor:grabbing}
   <div class="main">
     <aside class="controls">
       <div class="group">
-        <h3>Element</h3>
+        <h3>Element <span id="elem-badge" class="badge" style="display:none">CUSTOM</span></h3>
         <div class="field">
           <label>Type</label>
           <select id="elem-type">
-            <option value="iso">Isotropic</option>
-            <option value="hertz" selected>Hertzian Dipole</option>
-            <option value="half">Half-Wave Dipole (λ/2)</option>
-            <option value="full">Full-Wave Dipole (λ)</option>
-            <option value="threehalf">3λ/2 Dipole</option>
+            <optgroup label="Linear Wire (Dipole)">
+              <option value="hertz" selected>Hertzian (infinitesimal)</option>
+              <option value="quarter">Quarter-wave (l = λ/4)</option>
+              <option value="half">Half-wave (l = λ/2)</option>
+              <option value="full">Full-wave (l = λ)</option>
+              <option value="threehalf">3λ/2 dipole</option>
+              <option value="varlen">Variable-length dipole</option>
+            </optgroup>
+            <optgroup label="Loop">
+              <option value="loop_small">Small loop (magnetic dipole)</option>
+              <option value="loop_circ">Circular loop (variable radius)</option>
+            </optgroup>
+            <optgroup label="Other">
+              <option value="iso">Isotropic</option>
+              <option value="custom">Custom (from Python script)</option>
+            </optgroup>
           </select>
+        </div>
+        <div class="field" id="dipole-length-field" style="display:none">
+          <label>Dipole length l / λ <span class="val" id="lbl-elemL">0.50</span></label>
+          <input type="range" id="elem-length" min="0.05" max="3" step="0.01" value="0.5">
+        </div>
+        <div class="field" id="loop-radius-field" style="display:none">
+          <label>Loop radius a / λ <span class="val" id="lbl-loopA">0.10</span></label>
+          <input type="range" id="loop-radius" min="0.005" max="1" step="0.005" value="0.10">
         </div>
         <div class="field">
           <label>Orientation α (w.r.t. z-axis) <span class="val" id="lbl-alpha">0°</span></label>
@@ -184,6 +264,33 @@ canvas#canvas-3d:active{cursor:grabbing}
         <div class="field">
           <label>Progressive Phase β <span class="val" id="lbl-beta">0°</span></label>
           <input type="range" id="beta" min="-180" max="180" step="1" value="0">
+        </div>
+      </div>
+
+      <div class="group">
+        <h3>Excitation Amplitudes <span id="amp-badge" class="badge" style="display:none">CUSTOM</span></h3>
+        <div class="field">
+          <label>Distribution</label>
+          <select id="amp-dist">
+            <option value="uniform" selected>Uniform</option>
+            <option value="binomial">Binomial</option>
+            <option value="triangular">Triangular</option>
+            <option value="cosine">Cosine</option>
+            <option value="cosine2">Cosine²</option>
+            <option value="dolph">Dolph–Chebyshev</option>
+            <option value="custom">Custom (from script)</option>
+          </select>
+        </div>
+        <div class="field" id="dolph-sll-field" style="display:none">
+          <label>Target side-lobe level <span class="val" id="lbl-dolph">−30 dB</span></label>
+          <input type="range" id="dolph-sll" min="13" max="60" step="1" value="30">
+        </div>
+        <div class="dist-bars-title">
+          <span id="dist-summary">a<sub>n</sub> = 1 (uniform)</span>
+          <span id="dist-max"></span>
+        </div>
+        <div class="dist-bars">
+          <svg id="dist-bars-svg" viewBox="0 0 320 80" preserveAspectRatio="none"></svg>
         </div>
       </div>
 
@@ -322,6 +429,80 @@ canvas#canvas-3d:active{cursor:grabbing}
       </div>
 
       <div class="formula" id="formula"></div>
+
+      <!-- Python scripting panel (Lumerical-style) -->
+      <div class="script-panel" id="script-panel">
+        <div class="script-head" id="script-head">
+          <div class="left">
+            <span>▸</span>
+            <span>Python Script Editor</span>
+          </div>
+          <div class="py-status" id="py-status">Python: not loaded (Pyodide will load on first Run, ~10 MB)</div>
+        </div>
+        <div class="script-body" id="script-body">
+          <div class="script-toolbar">
+            <button class="primary" id="script-run">▶ Run</button>
+            <button id="script-clear">Reset</button>
+            <select id="script-examples">
+              <option value="">Insert example…</option>
+              <option value="ex_hertz">Hertzian dipole (rebuild built-in)</option>
+              <option value="ex_cos_elem">cos²(θ) element pattern</option>
+              <option value="ex_yagi">Yagi-like directive element</option>
+              <option value="ex_loop_a">Circular loop a = 0.3λ via J₁</option>
+              <option value="ex_taylor">Taylor n-bar-like taper</option>
+              <option value="ex_chirp">Quadratic phase chirp (focusing)</option>
+              <option value="ex_scan">Beam-steered uniform array</option>
+              <option value="ex_dolph">Dolph–Chebyshev (analytic, −30 dB)</option>
+              <option value="ex_phased_dolph">Dolph amplitudes + scan phases</option>
+              <option value="ex_full">Fully-custom pattern(theta, phi)</option>
+            </select>
+            <button id="script-help">Help / API</button>
+            <span class="spacer"></span>
+            <button class="danger" id="script-revert">Revert to GUI</button>
+          </div>
+          <textarea class="script-editor" id="script-editor" spellcheck="false" autocomplete="off"
+                    placeholder="# Write Python here. Define one or more of:
+#   element_pattern(theta)               # 1D, axisymmetric
+#   excitations(N)                       # per-element amp + phase
+#   pattern(theta, phi)                  # full override (returns E·AF)
+#
+# theta in [0, pi]  measured from +z (array axis)
+# phi   in [0, 2pi]  measured from +x in xy-plane
+#
+# numpy is available as np."></textarea>
+          <div class="script-console" id="script-console">Ready. Click ▶ Run to load Python and execute.</div>
+        </div>
+      </div>
+
+      <!-- Help popup -->
+      <div class="help-popup" id="help-popup">
+        <h4>Scripting API</h4>
+        <p>Define any of these in your script. Anything you omit falls back to the GUI.</p>
+
+        <h4>element_pattern(theta) → float</h4>
+        <p>Axisymmetric element pattern. <code>theta</code> is measured from the element axis <b>n̂</b> (which is tilted from +z by the Orientation slider). Returns a non-negative magnitude; the visualizer normalizes the peak to 1.</p>
+        <pre>def element_pattern(theta):
+    return abs(np.sin(theta))  # Hertzian dipole</pre>
+
+        <h4>excitations(N) → dict</h4>
+        <p>Per-element amplitudes and phases. Return a dict with <code>amps</code> and <code>phases</code> (radians) of length N.</p>
+        <pre>def excitations(N):
+    n = np.arange(N)
+    return {
+        "amps":   np.cos(np.pi * (n - (N-1)/2) / (N-1) if N>1 else 0),
+        "phases": np.zeros(N),
+    }</pre>
+
+        <h4>pattern(theta, phi) → float</h4>
+        <p>Full override. If defined, this replaces <code>E·AF</code> entirely. <code>theta</code> from +z, <code>phi</code> from +x. Used for cases that don't factor (mutual coupling, conformal arrays, etc.).</p>
+        <pre>def pattern(theta, phi):
+    return np.abs(np.cos(theta))**2</pre>
+
+        <h4>Available</h4>
+        <p><code>np</code> (numpy), <code>math</code>, <code>print(...)</code> → script console. The 3 functions above run once when you click <b>Run</b>; results are cached as sampled grids.</p>
+        <p>To go back to the GUI-driven element/amplitudes after running a script, click <b>Revert to GUI</b>.</p>
+        <button id="help-close">Close</button>
+      </div>
     </section>
   </div>
 </div>
@@ -334,6 +515,24 @@ canvas#canvas-3d:active{cursor:grabbing}
    ===================================================== */
 const state = {
   N:2, d:0.5, beta:0, alpha:0, elemType:"hertz",
+  elemLength:0.5,            // l/λ for "varlen" dipole
+  loopRadius:0.10,           // a/λ for circular loop
+  ampDist:"uniform",         // amplitude distribution key
+  dolphSLL:30,               // Dolph-Chebyshev target SLL in dB (positive, used as -SLL)
+  amps:null,                 // Float64Array of current per-element amplitudes
+  phases:null,               // Float64Array of current per-element phases (radians)
+  afMax:1,                   // peak of |AF| for normalization
+  // Custom (from Python script)
+  customAmps:null,           // length-N array or null
+  customPhases:null,         // length-N array or null
+  customElemTable:null,      // Float64Array[181] over theta = 0..pi
+  customElemMax:1,
+  customPatternGrid:null,    // {theta:[T], phi:[P], data:Float32Array} or null
+  customPatternMax:1,
+  scriptElemActive:false,    // a script-supplied element_pattern is active
+  scriptExcActive:false,     // a script-supplied excitations() is active
+  scriptPatternActive:false, // a script-supplied pattern() fully overrides
+  // Display
   showGrid:true, showLabels:true, showAxes:true,
   showElements:true, showBeam:true,
   dbMode:false, dbMin:-40,
@@ -345,20 +544,30 @@ const state = {
 };
 
 const ELEMENT_NAMES = {
-  iso:"Isotropic", hertz:"Hertzian Dipole",
-  half:"Half-Wave Dipole", full:"Full-Wave Dipole",
-  threehalf:"3λ/2 Dipole"
+  iso:"Isotropic",
+  hertz:"Hertzian Dipole",
+  quarter:"λ/4 Dipole",
+  half:"Half-Wave Dipole",
+  full:"Full-Wave Dipole",
+  threehalf:"3λ/2 Dipole",
+  varlen:"Var-Length Dipole",
+  loop_small:"Small Loop",
+  loop_circ:"Circular Loop",
+  custom:"Custom (Python)",
+};
+
+const AMP_NAMES = {
+  uniform:"Uniform",
+  binomial:"Binomial",
+  triangular:"Triangular",
+  cosine:"Cosine",
+  cosine2:"Cosine²",
+  dolph:"Dolph–Chebyshev",
+  custom:"Custom (Python)",
 };
 
 /* =====================================================
    PLANES
-   Each plane defines orthonormal (u, v) so that
-     r̂(ψ) = cos(ψ)·u + sin(ψ)·v
-   parameterizes directions in that plane.
-   labels: text shown along screen-cardinal directions
-   (these correspond to ψ = 0°, 90°, 180°, 270°).
-   With the SVG y-axis flipped (cy + r·sinψ), screen
-   placement is: 0° → right, 90° → bottom, 180° → left, 270° → top.
    ===================================================== */
 const PLANES = {
   xz: {
@@ -382,84 +591,356 @@ const PLANES = {
 };
 
 /* =====================================================
-   MATH
-   - Array along z. AF depends on cosθ where θ is angle
-     from z-axis: cosθ = direction · ẑ.
-   - Element axis tilted by α (in xz-plane):
-       n̂ = (sin α, 0, cos α)
-     Element pattern uses θ_d = angle from n̂:
-       cos θ_d = direction · n̂
-   - Total: F = E · AF (pattern multiplication, exact for
-     identical co-oriented elements).
+   SPECIAL FUNCTIONS
    ===================================================== */
-
-// Element-pattern peaks (for normalisation to max = 1)
-const ELEM_MAX = (() => {
-  const out = {};
-  const types = ["iso","hertz","half","full","threehalf"];
-  const SAMPLES = 7200;
-  for (const t of types) {
-    let m = 0;
-    for (let i = 0; i < SAMPLES; i++) {
-      const th = (i/SAMPLES)*Math.PI;            // θ_d ∈ [0, π]
-      const c = Math.cos(th), s = Math.sin(th);
-      let v;
-      if (t === "iso") v = 1;
-      else if (t === "hertz") v = Math.abs(s);
-      else if (s < 1e-9) v = 0;
-      else if (t === "half") v = Math.abs(Math.cos((Math.PI/2)*c)/s);
-      else if (t === "full") v = Math.abs((Math.cos(Math.PI*c)+1)/s);
-      else if (t === "threehalf") v = Math.abs(Math.cos((3*Math.PI/2)*c)/s);
-      if (v > m) m = v;
+// Bessel J_1 via power series; good for |x| up to ~12.
+function besselJ1(x) {
+  const ax = Math.abs(x);
+  if (ax < 1e-12) return 0.5*x;
+  if (ax < 8) {
+    // Power series: J_1(x) = (x/2) Σ_{k=0}^∞ (-(x/2)²)^k / (k! (k+1)!)
+    const x2 = x/2;
+    const m = -x2*x2;
+    let sum = 1, term = 1;
+    for (let k = 1; k < 60; k++) {
+      term *= m / (k * (k+1));
+      sum += term;
+      if (Math.abs(term) < 1e-14 * Math.abs(sum)) break;
     }
-    out[t] = m || 1;
+    return x2 * sum;
   }
-  return out;
-})();
+  // Asymptotic for large |x|
+  const z = 8/ax;
+  const z2 = z*z;
+  const p = 1 - 0.1875*z2;       // P_1 series, 1st correction
+  const q = 0.375*z - 0.0820*z2*z; // Q_1 series, two terms
+  const chi = ax - 0.75*Math.PI;
+  const j = Math.sqrt(2/(Math.PI*ax)) * (p*Math.cos(chi) - q*Math.sin(chi));
+  return x < 0 ? -j : j;
+}
 
-// Element pattern as a function of cos(θ_d).  Returns value in [0, 1].
-function elementFromCos(cosThd, type) {
-  if (cosThd > 1) cosThd = 1; else if (cosThd < -1) cosThd = -1;
-  const sinThd = Math.sqrt(1 - cosThd*cosThd);
+// Chebyshev polynomial T_n(x) via recurrence
+function chebT(n, x) {
+  if (n === 0) return 1;
+  if (n === 1) return x;
+  let t0 = 1, t1 = x;
+  for (let i = 2; i <= n; i++) {
+    const t = 2*x*t1 - t0;
+    t0 = t1; t1 = t;
+  }
+  return t1;
+}
+
+/* =====================================================
+   ELEMENT-PATTERN MAGNITUDE
+   ===================================================== */
+// Cache per current element settings: (type, elemLength, loopRadius)
+let _elemMaxCache = { key:"", val:1 };
+
+function elemMagFromThetaD(thd, type) {
+  // theta_d in [0, pi] from element axis n̂.
+  const ct = Math.cos(thd);
+  const st = Math.sin(thd);
   let v;
   switch (type) {
-    case "iso":   v = 1; break;
-    case "hertz": v = sinThd; break;
-    case "half":
-      v = (sinThd < 1e-7) ? 0 : Math.abs(Math.cos((Math.PI/2)*cosThd) / sinThd);
-      break;
-    case "full":
-      v = (sinThd < 1e-7) ? 0 : Math.abs((Math.cos(Math.PI*cosThd)+1) / sinThd);
-      break;
-    case "threehalf":
-      v = (sinThd < 1e-7) ? 0 : Math.abs(Math.cos((3*Math.PI/2)*cosThd) / sinThd);
-      break;
-    default: v = 1;
+    case "iso":   return 1;
+    case "hertz": return st < 0 ? -st : st;
+    case "quarter": {
+      if (st < 1e-7) return 0;
+      const kl2 = Math.PI/4;
+      v = Math.abs(Math.cos(kl2*ct) - Math.cos(kl2)) / st;
+      return v;
+    }
+    case "half": {
+      if (st < 1e-7) return 0;
+      v = Math.abs(Math.cos((Math.PI/2)*ct)/st);
+      return v;
+    }
+    case "full": {
+      if (st < 1e-7) return 0;
+      v = Math.abs((Math.cos(Math.PI*ct)+1)/st);
+      return v;
+    }
+    case "threehalf": {
+      if (st < 1e-7) return 0;
+      v = Math.abs(Math.cos((3*Math.PI/2)*ct)/st);
+      return v;
+    }
+    case "varlen": {
+      const kl2 = Math.PI * state.elemLength;
+      if (st < 1e-7) {
+        // numerator → 0 too; limit is 0 unless cos(kl2)=cos(kl2·±1)=±1 (rare)
+        return 0;
+      }
+      v = Math.abs(Math.cos(kl2*ct) - Math.cos(kl2)) / st;
+      return v;
+    }
+    case "loop_small": {
+      return st < 0 ? -st : st;
+    }
+    case "loop_circ": {
+      const ka = 2*Math.PI*state.loopRadius;
+      return Math.abs(besselJ1(ka*st));
+    }
+    case "custom": {
+      if (!state.customElemTable) return 1;
+      // Linear interp over [0, pi]
+      const T = state.customElemTable;
+      const M = T.length - 1;
+      let i = (thd / Math.PI) * M;
+      if (i < 0) i = 0; else if (i > M) i = M;
+      const i0 = Math.floor(i);
+      const i1 = Math.min(M, i0 + 1);
+      const f = i - i0;
+      return T[i0]*(1-f) + T[i1]*f;
+    }
+    default: return 1;
   }
-  return v / ELEM_MAX[type];
 }
 
-function arrayFactorFromCosTheta(cosTheta, N, d, betaRad) {
-  if (N <= 1) return 1;
-  const psi = 2*Math.PI*d*cosTheta + betaRad;
-  const half = psi / 2;
-  const sh = Math.sin(half);
-  if (Math.abs(sh) < 1e-9) return 1;
-  return Math.abs(Math.sin(N*half) / (N*sh));
+function recomputeElementMax() {
+  // Cache key
+  const key = state.elemType + ":" + state.elemLength + ":" + state.loopRadius +
+              ":" + (state.scriptElemActive ? "C"+state.customElemMax : "G");
+  if (_elemMaxCache.key === key) return _elemMaxCache.val;
+  if (state.elemType === "iso") {
+    _elemMaxCache = { key, val:1 }; return 1;
+  }
+  if (state.elemType === "custom") {
+    _elemMaxCache = { key, val:state.customElemMax || 1 };
+    return _elemMaxCache.val;
+  }
+  let m = 0;
+  const S = 2400;
+  for (let i = 0; i <= S; i++) {
+    const thd = (i/S) * Math.PI;
+    const v = elemMagFromThetaD(thd, state.elemType);
+    if (v > m) m = v;
+  }
+  if (!isFinite(m) || m < 1e-12) m = 1;
+  _elemMaxCache = { key, val:m };
+  return m;
 }
 
-// Evaluate F at a 3D direction (rx, ry, rz), |r̂| = 1.
-function patternAtDir(rx, ry, rz) {
-  const cosTheta = rz;
-  const af = arrayFactorFromCosTheta(cosTheta, state.N, state.d,
-                                     state.beta*Math.PI/180);
+function elementAtDir(rx, ry, rz) {
+  // theta_d = angle between direction r and element axis n̂ = (sin α, 0, cos α)
   const aRad = state.alpha*Math.PI/180;
-  const cosThd = rx*Math.sin(aRad) + rz*Math.cos(aRad); // ny = 0
-  const e = elementFromCos(cosThd, state.elemType);
+  const cosThd = rx*Math.sin(aRad) + rz*Math.cos(aRad);
+  const thd = Math.acos(Math.max(-1, Math.min(1, cosThd)));
+  const v = elemMagFromThetaD(thd, state.elemType);
+  return v / _elemMaxCache.val;
+}
+
+/* =====================================================
+   AMPLITUDE DISTRIBUTIONS
+   ===================================================== */
+function ampUniform(N) { const a = new Float64Array(N); for (let n=0;n<N;n++) a[n]=1; return a; }
+
+function ampBinomial(N) {
+  const a = new Float64Array(N);
+  let c = 1; a[0] = 1;
+  for (let n = 1; n < N; n++) { c = c * (N-n)/n; a[n] = c; }
+  return a;
+}
+
+function ampTriangular(N) {
+  const a = new Float64Array(N);
+  if (N === 1) { a[0] = 1; return a; }
+  const M = (N-1)/2;
+  for (let n = 0; n < N; n++) a[n] = Math.max(0, 1 - Math.abs(n - M)/M);
+  return a;
+}
+
+function ampCosineK(N, k) {
+  const a = new Float64Array(N);
+  if (N === 1) { a[0] = 1; return a; }
+  const M = (N-1)/2;
+  for (let n = 0; n < N; n++) {
+    const x = (n - M) / M;            // x in [-1, 1]
+    const c = Math.cos(x * Math.PI/2);
+    a[n] = Math.pow(c, k);
+  }
+  return a;
+}
+
+function ampDolphChebyshev(N, sllDb) {
+  if (N <= 1) { const a = new Float64Array(N); for (let n=0;n<N;n++) a[n]=1; return a; }
+  const R = Math.pow(10, sllDb/20);             // voltage ratio
+  if (R <= 1) return ampUniform(N);
+  const z0 = Math.cosh(Math.acosh(R)/(N-1));
+
+  // Sample T_{N-1}(z0 cos t) at K midpoints in [0, π]
+  const K = 4096;
+  const samples = new Float64Array(K);
+  for (let i = 0; i < K; i++) {
+    const t = (i + 0.5) * Math.PI / K;
+    samples[i] = chebT(N-1, z0 * Math.cos(t));
+  }
+  // Get Chebyshev expansion: f(t) = b_0 + Σ_{k≥1} b_k cos(k t)
+  // b_0 = (1/π) ∫ f dt,  b_k = (2/π) ∫ f cos(k t) dt
+  const Kmax = N;                                // need up to b_{N-1}
+  const b = new Float64Array(Kmax);
+  for (let k = 0; k < Kmax; k++) {
+    let s = 0;
+    for (let i = 0; i < K; i++) {
+      const t = (i + 0.5) * Math.PI / K;
+      s += samples[i] * Math.cos(k * t);
+    }
+    s *= Math.PI / K;
+    b[k] = (k === 0 ? 1 : 2) * s / Math.PI;
+  }
+  // Map to symmetric currents.
+  // Odd N (=2M+1):  f(t) = I_0 + 2 Σ_{m=1..M} I_m cos(2m·t)        → I_m = b_{2m}/2 (m≥1), I_0 = b_0
+  // Even N (=2M):   f(t) =        2 Σ_{m=1..M} I_m cos((2m-1)t)    → I_m = b_{2m-1}/2
+  const I = new Float64Array(N);
+  if (N % 2 === 1) {
+    const M = (N-1)/2;
+    I[M] = b[0];
+    for (let m = 1; m <= M; m++) {
+      const v = b[2*m] / 2;
+      I[M - m] = v; I[M + m] = v;
+    }
+  } else {
+    const M = N/2;
+    for (let m = 1; m <= M; m++) {
+      const v = b[2*m - 1] / 2;
+      I[M - m] = v; I[M + m - 1] = v;
+    }
+  }
+  // Normalize so peak = 1
+  let mx = 0;
+  for (let n = 0; n < N; n++) if (Math.abs(I[n]) > mx) mx = Math.abs(I[n]);
+  if (mx > 0) for (let n = 0; n < N; n++) I[n] /= mx;
+  return I;
+}
+
+function ampCustom(N) {
+  const a = new Float64Array(N);
+  const src = state.customAmps;
+  if (src && src.length === N) {
+    for (let n = 0; n < N; n++) a[n] = src[n];
+  } else if (src && src.length > 0) {
+    // Resample by linear interpolation if length mismatches
+    for (let n = 0; n < N; n++) {
+      const t = (n/(N-1 || 1)) * (src.length - 1);
+      const i0 = Math.floor(t), i1 = Math.min(src.length-1, i0+1);
+      const f = t - i0;
+      a[n] = src[i0]*(1-f) + src[i1]*f;
+    }
+  } else {
+    for (let n = 0; n < N; n++) a[n] = 1;
+  }
+  return a;
+}
+
+function computeAmps() {
+  switch (state.ampDist) {
+    case "uniform":    return ampUniform(state.N);
+    case "binomial":   return ampBinomial(state.N);
+    case "triangular": return ampTriangular(state.N);
+    case "cosine":     return ampCosineK(state.N, 1);
+    case "cosine2":    return ampCosineK(state.N, 2);
+    case "dolph":      return ampDolphChebyshev(state.N, state.dolphSLL);
+    case "custom":     return ampCustom(state.N);
+  }
+  return ampUniform(state.N);
+}
+
+function computePhases() {
+  const N = state.N;
+  const p = new Float64Array(N);
+  const beta = state.beta * Math.PI / 180;
+  const customP = state.customPhases;
+  const haveCustom = state.ampDist === "custom" && customP && customP.length > 0;
+  for (let n = 0; n < N; n++) {
+    let extra = 0;
+    if (haveCustom) {
+      if (customP.length === N) {
+        extra = customP[n];
+      } else {
+        const t = (n/(N-1 || 1)) * (customP.length - 1);
+        const i0 = Math.floor(t), i1 = Math.min(customP.length-1, i0+1);
+        const f = t - i0;
+        extra = customP[i0]*(1-f) + customP[i1]*f;
+      }
+    }
+    p[n] = n*beta + extra;
+  }
+  return p;
+}
+
+function rebuildExcitations() {
+  state.amps = computeAmps();
+  state.phases = computePhases();
+  state.afMax = computeAfMax();
+}
+
+function computeAfMax() {
+  // Peak of |Σ a_n exp(j(2π d n cosθ + φ_n))| over cosθ in [-1, 1]
+  const N = state.N;
+  if (N <= 1) return Math.abs(state.amps[0] || 1) || 1;
+  const k_d = 2*Math.PI*state.d;
+  const S = 4000;
+  let mx = 0;
+  for (let i = 0; i <= S; i++) {
+    const ct = -1 + 2*i/S;
+    let re = 0, im = 0;
+    for (let n = 0; n < N; n++) {
+      const ph = k_d*n*ct + state.phases[n];
+      re += state.amps[n]*Math.cos(ph);
+      im += state.amps[n]*Math.sin(ph);
+    }
+    const m = Math.hypot(re, im);
+    if (m > mx) mx = m;
+  }
+  return mx > 1e-12 ? mx : 1;
+}
+
+function arrayFactorFromCosTheta(cosTheta) {
+  const N = state.N;
+  if (N <= 1) return 1;
+  const k_d = 2*Math.PI*state.d;
+  let re = 0, im = 0;
+  for (let n = 0; n < N; n++) {
+    const ph = k_d*n*cosTheta + state.phases[n];
+    re += state.amps[n]*Math.cos(ph);
+    im += state.amps[n]*Math.sin(ph);
+  }
+  return Math.hypot(re, im) / state.afMax;
+}
+
+/* =====================================================
+   PATTERN EVALUATION
+   ===================================================== */
+function patternAtDir(rx, ry, rz) {
+  if (state.scriptPatternActive && state.customPatternGrid) {
+    // theta in [0,π] from +z, phi in [0,2π] from +x
+    const theta = Math.acos(Math.max(-1, Math.min(1, rz)));
+    let phi = Math.atan2(ry, rx);
+    if (phi < 0) phi += 2*Math.PI;
+    const G = state.customPatternGrid;
+    const Tn = G.theta - 1, Pn = G.phi - 1;
+    const ti = (theta / Math.PI) * Tn;
+    const pi_ = (phi / (2*Math.PI)) * Pn;
+    const t0 = Math.floor(ti), p0 = Math.floor(pi_);
+    const t1 = Math.min(Tn, t0+1), p1 = Math.min(Pn, p0+1);
+    const ft = ti - t0, fp = pi_ - p0;
+    const D = G.data;
+    const W = G.phi;
+    const v00 = D[t0*W + p0];
+    const v01 = D[t0*W + p1];
+    const v10 = D[t1*W + p0];
+    const v11 = D[t1*W + p1];
+    const v0 = v00*(1-fp) + v01*fp;
+    const v1 = v10*(1-fp) + v11*fp;
+    const v = (v0*(1-ft) + v1*ft) / state.customPatternMax;
+    return { elem:v, af:1, total:v };
+  }
+  const af = arrayFactorFromCosTheta(rz);
+  const e  = elementAtDir(rx, ry, rz);
   return { elem:e, af:af, total:e*af };
 }
 
-// Evaluate F at plot angle ψ in the chosen plane.
 function patternAtPlane(psi, planeKey) {
   const P = PLANES[planeKey];
   const c = Math.cos(psi), s = Math.sin(psi);
@@ -468,8 +949,6 @@ function patternAtPlane(psi, planeKey) {
   const rz = c*P.u[2] + s*P.v[2];
   return patternAtDir(rx, ry, rz);
 }
-
-// Backwards-compatible 2D entry point (uses current plane).
 function patternAt(psi) { return patternAtPlane(psi, state.plane); }
 
 /* =====================================================
@@ -529,10 +1008,9 @@ function analyzePattern() {
 const SVG_NS = "http://www.w3.org/2000/svg";
 const svg = document.getElementById("polar");
 const tooltip = document.getElementById("tooltip");
-const cx = 400, cy = 400, R = 300;     // smaller R to leave room for axis labels
+const cx = 400, cy = 400, R = 300;
 
 function polar(psi, r) {
-  // y is flipped (cy + r·sin) so screen labels match 0° right, 90° bottom, 270° top
   return { x: cx + r*Math.cos(psi), y: cy + r*Math.sin(psi) };
 }
 function polarDeg(deg, r) { return polar(deg*Math.PI/180, r); }
@@ -605,11 +1083,10 @@ function drawAngleLabels() {
   }
 }
 
-// Axis labels on the four cardinal directions, per current plane.
 function drawAxisLabels() {
   if (!state.showAxes) return;
   const P = PLANES[state.plane];
-  const L = P.labels;  // { 0, 90, 180, 270 }
+  const L = P.labels;
   const colorFor = (lbl) => {
     if (lbl.includes("x")) return "var(--axis-x)";
     if (lbl.includes("y")) return "var(--axis-y)";
@@ -620,7 +1097,6 @@ function drawAxisLabels() {
     const a = parseInt(angStr);
     const lbl = L[angStr];
     const col = colorFor(lbl);
-    // arrow: solid line and arrowhead, slightly outside outer ring
     const tip = polarDeg(a, R + 12);
     const head = polarDeg(a, R + 6);
     const baseL = { x: head.x + 5*Math.cos((a+150)*Math.PI/180),
@@ -631,7 +1107,6 @@ function drawAxisLabels() {
       points: `${tip.x.toFixed(1)},${tip.y.toFixed(1)} ${baseL.x.toFixed(1)},${baseL.y.toFixed(1)} ${baseR.x.toFixed(1)},${baseR.y.toFixed(1)}`,
       fill: col
     }));
-    // text label
     const lp = polarDeg(a, R + 32);
     svg.appendChild(el("text", {
       x:lp.x, y:lp.y, "text-anchor":"middle",
@@ -705,12 +1180,24 @@ function drawArrayLayout() {
   }));
   svg.appendChild(el("text", {
     x:stripPad-6, y:stripY-8, "font-size":10, fill:"var(--dim)"
-  }, `Array layout (along z-axis) — N=${N}, d=${d.toFixed(2)}λ`));
+  }, `Array layout (along z-axis) — N=${N}, d=${d.toFixed(2)}λ, ${AMP_NAMES[state.ampDist]||""}`));
+  // Find max abs amp for radius scaling
+  let amax = 0;
+  if (state.amps) for (let n = 0; n < N; n++) {
+    const a = Math.abs(state.amps[n]);
+    if (a > amax) amax = a;
+  }
+  if (amax < 1e-9) amax = 1;
   for (let i = 0; i < N; i++) {
     const x = start + i*d*scale;
+    const a = state.amps ? state.amps[i] : 1;
+    const aAbs = Math.abs(a);
+    const r = 3 + 6 * (aAbs / amax);
+    const fill = a >= 0 ? "var(--accent)" : "var(--err)";
+    const stroke = a >= 0 ? "var(--accent-dark)" : "#7d0e0e";
     svg.appendChild(el("circle", {
-      cx:x, cy:stripY+6, r:5,
-      fill:"var(--accent)", stroke:"var(--accent-dark)", "stroke-width":1
+      cx:x, cy:stripY+6, r,
+      fill, stroke, "stroke-width":1
     }));
     const aRad = state.alpha*Math.PI/180;
     const len = 9;
@@ -718,7 +1205,7 @@ function drawArrayLayout() {
     const dy = -len*Math.sin(aRad);
     svg.appendChild(el("line", {
       x1:x-dx, y1:stripY+6-dy, x2:x+dx, y2:stripY+6+dy,
-      stroke:"var(--accent-dark)", "stroke-width":2, "stroke-linecap":"round"
+      stroke:stroke, "stroke-width":2, "stroke-linecap":"round"
     }));
   }
 }
@@ -760,13 +1247,72 @@ function render2D() {
 }
 
 /* =====================================================
+   AMPLITUDE BAR CHART (sidebar)
+   ===================================================== */
+function renderDistBars() {
+  const svgEl = document.getElementById("dist-bars-svg");
+  while (svgEl.firstChild) svgEl.removeChild(svgEl.firstChild);
+  const N = state.N, amps = state.amps;
+  if (!amps || N === 0) return;
+  const W = 320, H = 80, pad = 4;
+  // Find max abs amplitude
+  let mx = 0;
+  for (let n = 0; n < N; n++) {
+    const a = Math.abs(amps[n]);
+    if (a > mx) mx = a;
+  }
+  if (mx < 1e-9) mx = 1;
+  const usableW = W - 2*pad;
+  const bw = usableW / Math.max(N, 1) * 0.8;
+  const step = usableW / Math.max(N, 1);
+  const x0 = pad + step/2 - bw/2;
+  for (let n = 0; n < N; n++) {
+    const a = amps[n];
+    const h = (Math.abs(a) / mx) * (H - 2*pad);
+    const y = (H - pad) - h;
+    const x = x0 + n*step;
+    svgEl.appendChild(elGeneric("rect", {
+      x:x, y:y, width:bw, height:h,
+      fill: a >= 0 ? "var(--bar)" : "var(--bar-neg)",
+      opacity:0.85, rx:1.5
+    }));
+  }
+  // Baseline
+  svgEl.appendChild(elGeneric("line", {
+    x1:pad, y1:H-pad, x2:W-pad, y2:H-pad,
+    stroke:"var(--grid-bold)", "stroke-width":0.6
+  }));
+  // Summary label
+  document.getElementById("dist-summary").innerHTML = ampSummary();
+  document.getElementById("dist-max").textContent = "peak " + mx.toFixed(3);
+}
+
+function elGeneric(name, attrs) {
+  const e = document.createElementNS(SVG_NS, name);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  return e;
+}
+
+function ampSummary() {
+  switch (state.ampDist) {
+    case "uniform":    return "a<sub>n</sub> = 1";
+    case "binomial":   return "a<sub>n</sub> = C(N−1, n)";
+    case "triangular": return "a<sub>n</sub> = max(0, 1 − |n−(N−1)/2| / ((N−1)/2))";
+    case "cosine":     return "a<sub>n</sub> = cos(π(n−(N−1)/2)/(N−1))";
+    case "cosine2":    return "a<sub>n</sub> = cos²(π(n−(N−1)/2)/(N−1))";
+    case "dolph":      return "a<sub>n</sub> = Dolph–Chebyshev, SLL = −" + state.dolphSLL + " dB";
+    case "custom":     return "a<sub>n</sub>, φ<sub>n</sub> from Python script";
+  }
+  return "";
+}
+
+/* =====================================================
    3D RENDERING (Three.js)
    ===================================================== */
-let three = null;   // { renderer, scene, camera, controls, mesh, axesGroup }
+let three = null;
 let animating = false;
 
 function colormap(t) {
-  // 5-stop viridis approximation; t in [0,1]
   t = Math.max(0, Math.min(1, t));
   const stops = [
     [0.267, 0.005, 0.329],
@@ -830,7 +1376,6 @@ function buildAxes(group) {
 }
 
 function buildPatternMesh(group, kind) {
-  // remove existing mesh
   const old = group.getObjectByName("patternMesh");
   if (old) {
     group.remove(old);
@@ -865,7 +1410,7 @@ function buildPatternMesh(group, kind) {
       const rx = st*Math.cos(phi), ry = st*Math.sin(phi), rz = ct;
       const idx = i*(pSeg+1) + j;
       const m = mags[idx];
-      const r = m;  // raw magnitude (already in [0, ~1])
+      const r = m;
       positions[idx*3+0] = r*rx;
       positions[idx*3+1] = r*ry;
       positions[idx*3+2] = r*rz;
@@ -911,7 +1456,7 @@ function init3D() {
   const camera = new THREE.PerspectiveCamera(45, 1, 0.01, 100);
   camera.position.set(2.4, 2.0, 2.4);
   camera.lookAt(0, 0, 0);
-  camera.up.set(0, 0, 1);  // z-up so the array axis is "up" in 3D
+  camera.up.set(0, 0, 1);
   const controls = new THREE.OrbitControls(camera, canvas);
   controls.enableDamping = true;
   controls.dampingFactor = 0.08;
@@ -933,7 +1478,6 @@ function init3D() {
 
   three = { renderer, scene, camera, controls, axesGroup, meshGroup };
 
-  // Resize handling
   const resize = () => {
     const wrap = document.getElementById("plot-3d-wrap");
     const w = wrap.clientWidth, h = wrap.clientHeight;
@@ -966,34 +1510,64 @@ function syncStats() {
   document.getElementById("stat-N").textContent = state.N;
   document.getElementById("stat-d").textContent = state.d.toFixed(2) + " λ";
   document.getElementById("stat-beta").textContent = state.beta + "°";
-  document.getElementById("stat-alpha").textContent = state.alpha + "°";
-  document.getElementById("stat-type").textContent = ELEMENT_NAMES[state.elemType];
+  document.getElementById("stat-amp").textContent = AMP_NAMES[state.ampDist] || "—";
+  document.getElementById("stat-type").textContent =
+    state.scriptPatternActive ? "Custom Pattern" : (ELEMENT_NAMES[state.elemType] || "—");
   document.getElementById("stat-view").textContent =
     state.viewMode === "3d" ? "3D / sphere" : ("2D / " + state.plane);
   document.getElementById("lbl-N").textContent = state.N;
   document.getElementById("lbl-d").textContent = state.d.toFixed(2);
   document.getElementById("lbl-beta").textContent = state.beta + "°";
   document.getElementById("lbl-alpha").textContent = state.alpha + "°";
+  document.getElementById("lbl-elemL").textContent = state.elemLength.toFixed(2);
+  document.getElementById("lbl-loopA").textContent = state.loopRadius.toFixed(3);
+  document.getElementById("lbl-dolph").textContent = "−" + state.dolphSLL + " dB";
   document.getElementById("lbl-dbmin").textContent = state.dbMin;
   document.getElementById("axis-note").textContent =
     state.viewMode === "3d"
       ? "3D surface · radius = |F(θ,φ)| · color = magnitude"
       : "Plane: " + state.plane + " · " + PLANES[state.plane].note;
+
+  // Contextual field visibility
+  document.getElementById("dipole-length-field").style.display =
+    (state.elemType === "varlen" && !state.scriptPatternActive) ? "" : "none";
+  document.getElementById("loop-radius-field").style.display =
+    (state.elemType === "loop_circ" && !state.scriptPatternActive) ? "" : "none";
+  document.getElementById("dolph-sll-field").style.display =
+    (state.ampDist === "dolph") ? "" : "none";
+
+  // Badges
+  document.getElementById("elem-badge").style.display =
+    (state.elemType === "custom" || state.scriptPatternActive) ? "" : "none";
+  document.getElementById("amp-badge").style.display =
+    (state.ampDist === "custom") ? "" : "none";
 }
 
 function updateFormula() {
+  if (state.scriptPatternActive) {
+    document.getElementById("formula").innerHTML =
+      "<b>F(θ, φ)</b> = user-defined pattern from Python script (E·AF decomposition skipped).";
+    return;
+  }
   let elem;
   switch (state.elemType) {
-    case "iso":       elem = "E = 1"; break;
-    case "hertz":     elem = "E ∝ |sin θ_d|"; break;
-    case "half":      elem = "E ∝ |cos((π/2)cos θ_d) / sin θ_d|"; break;
-    case "full":      elem = "E ∝ |[cos(π·cos θ_d)+1] / sin θ_d|"; break;
-    case "threehalf": elem = "E ∝ |cos((3π/2)·cos θ_d) / sin θ_d|"; break;
+    case "iso":        elem = "E = 1"; break;
+    case "hertz":      elem = "E ∝ |sin θ_d|"; break;
+    case "quarter":    elem = "E ∝ |cos((π/4)cos θ_d) − cos(π/4)| / sin θ_d"; break;
+    case "half":       elem = "E ∝ |cos((π/2)cos θ_d) / sin θ_d|"; break;
+    case "full":       elem = "E ∝ |[cos(π cos θ_d)+1] / sin θ_d|"; break;
+    case "threehalf":  elem = "E ∝ |cos((3π/2)cos θ_d) / sin θ_d|"; break;
+    case "varlen":     elem = "E ∝ |cos(kℓ/2·cos θ_d) − cos(kℓ/2)| / sin θ_d, ℓ=" + state.elemLength.toFixed(2) + "λ"; break;
+    case "loop_small": elem = "E ∝ |sin θ_d|  (small loop / magnetic dipole)"; break;
+    case "loop_circ":  elem = "E ∝ |J₁(2π(a/λ) sin θ_d)|, a=" + state.loopRadius.toFixed(3) + "λ"; break;
+    case "custom":     elem = "E = user-defined element_pattern(θ_d) from Python script"; break;
   }
+  const afForm = (state.ampDist === "uniform")
+    ? "|AF| = |sin(Nψ/2) / (N·sin(ψ/2))|, ψ = 2π(d/λ)cos θ + β"
+    : "AF = |Σ<sub>n</sub> aₙ exp[j(2π(d/λ)n cos θ + φₙ)]| (non-uniform)";
   document.getElementById("formula").innerHTML =
-    `<b>F = E · AF</b> · cos θ_d = r̂·n̂  (n̂ tilted by α from ẑ) · ` +
-    elem +
-    ` · |AF| = |sin(Nψ/2) / (N·sin(ψ/2))|, ψ = 2π(d/λ)·cos θ + β · θ measured from ẑ (array axis)`;
+    "<b>F = E · AF</b> · cos θ_d = r̂·n̂  (n̂ tilted by α from ẑ) · " +
+    elem + " · " + afForm + " · θ measured from ẑ (array axis)";
 }
 
 function updateClickInfo() {
@@ -1040,8 +1614,11 @@ function updateAnalysisPanel(a) {
 }
 
 function refresh() {
+  recomputeElementMax();
+  rebuildExcitations();
   syncStats();
   updateFormula();
+  renderDistBars();
   if (state.viewMode === "2d") {
     recomputeSamples();
     render2D();
@@ -1153,7 +1730,14 @@ svg.addEventListener("keydown", e => {
    CONTROLS WIRING
    ===================================================== */
 document.getElementById("elem-type").addEventListener("change", e => {
-  state.elemType = e.target.value; refresh();
+  state.elemType = e.target.value;
+  refresh();
+});
+document.getElementById("elem-length").addEventListener("input", e => {
+  state.elemLength = parseFloat(e.target.value); refresh();
+});
+document.getElementById("loop-radius").addEventListener("input", e => {
+  state.loopRadius = parseFloat(e.target.value); refresh();
 });
 document.getElementById("alpha").addEventListener("input", e => {
   state.alpha = parseInt(e.target.value); refresh();
@@ -1167,6 +1751,12 @@ document.getElementById("d").addEventListener("input", e => {
 document.getElementById("beta").addEventListener("input", e => {
   state.beta = parseInt(e.target.value); refresh();
 });
+document.getElementById("amp-dist").addEventListener("change", e => {
+  state.ampDist = e.target.value; refresh();
+});
+document.getElementById("dolph-sll").addEventListener("input", e => {
+  state.dolphSLL = parseInt(e.target.value); refresh();
+});
 document.getElementById("plane").addEventListener("change", e => {
   state.plane = e.target.value; refresh();
 });
@@ -1174,7 +1764,6 @@ document.getElementById("pattern-3d").addEventListener("change", e => {
   state.pattern3D = e.target.value; refresh();
 });
 
-// Beam steering: β = -k·d·cos(θ₀) where θ₀ is angle from z-axis.
 document.getElementById("scan-apply").addEventListener("click", () => {
   const theta0 = parseFloat(document.getElementById("scan-target").value);
   if (!isFinite(theta0)) return;
@@ -1210,7 +1799,6 @@ document.getElementById("db-min").addEventListener("input", e => {
   state.dbMin = parseInt(e.target.value); refresh();
 });
 
-// Phase presets
 document.querySelectorAll("button[data-preset]").forEach(btn => {
   btn.addEventListener("click", () => {
     const p = btn.dataset.preset;
@@ -1233,7 +1821,13 @@ document.querySelectorAll("button[data-preset]").forEach(btn => {
       }
       case "reset":
         state.N=2; state.d=0.5; state.beta=0; state.alpha=0;
-        state.elemType="hertz";
+        state.elemType="hertz"; state.elemLength=0.5; state.loopRadius=0.10;
+        state.ampDist="uniform"; state.dolphSLL=30;
+        state.customAmps=null; state.customPhases=null;
+        state.customElemTable=null; state.customElemMax=1;
+        state.customPatternGrid=null; state.customPatternMax=1;
+        state.scriptElemActive=false; state.scriptExcActive=false;
+        state.scriptPatternActive=false;
         state.dbMode=false; state.dbMin=-40;
         state.showGrid=true; state.showLabels=true; state.showAxes=true;
         state.showElements=true; state.showBeam=true;
@@ -1241,7 +1835,11 @@ document.querySelectorAll("button[data-preset]").forEach(btn => {
         state.clickAngle=null; state.hoverAngle=null;
         state.plane="xz"; state.pattern3D="total";
         document.getElementById("elem-type").value="hertz";
+        document.getElementById("elem-length").value=0.5;
+        document.getElementById("loop-radius").value=0.10;
         document.getElementById("alpha").value=0;
+        document.getElementById("amp-dist").value="uniform";
+        document.getElementById("dolph-sll").value=30;
         document.getElementById("plane").value="xz";
         document.getElementById("pattern-3d").value="total";
         document.getElementById("show-grid").checked=true;
@@ -1266,7 +1864,6 @@ document.querySelectorAll("button[data-preset]").forEach(btn => {
   });
 });
 
-// Pattern visibility (2D curves)
 function setCurveVisible(curve, visible) {
   state.visible[curve] = visible;
   const cb = document.getElementById("t-" + curve);
@@ -1312,7 +1909,471 @@ function setViewMode(mode) {
 document.getElementById("view-2d").addEventListener("click", () => setViewMode("2d"));
 document.getElementById("view-3d").addEventListener("click", () => setViewMode("3d"));
 
-// First render
+/* =====================================================
+   PYTHON SCRIPT EDITOR (Pyodide)
+   ===================================================== */
+const scriptHead = document.getElementById("script-head");
+const scriptBody = document.getElementById("script-body");
+const scriptEditor = document.getElementById("script-editor");
+const scriptConsole = document.getElementById("script-console");
+const pyStatus = document.getElementById("py-status");
+const helpPopup = document.getElementById("help-popup");
+
+const DEFAULT_SCRIPT =
+`# Edit Python here and click ▶ Run.
+# Define any of:
+#
+#   def element_pattern(theta):
+#       return abs(np.sin(theta))             # axisymmetric, theta in [0, pi]
+#
+#   def excitations(N):
+#       n = np.arange(N)
+#       return {
+#           "amps":   np.ones(N),             # length N
+#           "phases": np.zeros(N),             # length N, radians
+#       }
+#
+#   def pattern(theta, phi):                   # optional: full override
+#       return abs(np.sin(theta))
+#
+# Anything you don't define is taken from the GUI.
+
+def excitations(N):
+    n = np.arange(N)
+    # Half-cosine taper across the aperture
+    if N > 1:
+        x = (n - (N-1)/2) / ((N-1)/2)
+        amps = np.cos(np.pi * x / 2)
+    else:
+        amps = np.ones(1)
+    return {"amps": amps, "phases": np.zeros(N)}
+`;
+
+scriptEditor.value = DEFAULT_SCRIPT;
+
+scriptHead.addEventListener("click", () => {
+  scriptBody.classList.toggle("open");
+  const arrow = scriptHead.querySelector(".left span");
+  arrow.textContent = scriptBody.classList.contains("open") ? "▾" : "▸";
+});
+
+scriptEditor.addEventListener("keydown", e => {
+  if (e.key === "Tab") {
+    e.preventDefault();
+    const s = scriptEditor.selectionStart, eEnd = scriptEditor.selectionEnd;
+    scriptEditor.value = scriptEditor.value.substring(0, s) + "    " +
+                         scriptEditor.value.substring(eEnd);
+    scriptEditor.selectionStart = scriptEditor.selectionEnd = s + 4;
+  }
+});
+
+function pyLog(msg, cls) {
+  const span = document.createElement("span");
+  if (cls) span.className = cls;
+  span.textContent = (typeof msg === "string" ? msg : String(msg)) + "\n";
+  scriptConsole.appendChild(span);
+  scriptConsole.scrollTop = scriptConsole.scrollHeight;
+}
+function pyLogClear() { scriptConsole.textContent = ""; }
+function setPyStatus(text, cls) {
+  pyStatus.textContent = text;
+  pyStatus.className = "py-status" + (cls ? " " + cls : "");
+}
+
+let pyodide = null;
+let pyodideLoading = null;
+async function getPyodide() {
+  if (pyodide) return pyodide;
+  if (pyodideLoading) return pyodideLoading;
+  setPyStatus("Python: loading Pyodide (~10 MB)…", "loading");
+  pyodideLoading = (async () => {
+    if (typeof loadPyodide === "undefined") {
+      await new Promise((resolve, reject) => {
+        const script = document.createElement("script");
+        script.src = "https://cdn.jsdelivr.net/pyodide/v0.27.1/full/pyodide.js";
+        script.onload = resolve;
+        script.onerror = () => reject(new Error("Failed to fetch Pyodide from CDN"));
+        document.head.appendChild(script);
+      });
+    }
+    const py = await loadPyodide({
+      indexURL: "https://cdn.jsdelivr.net/pyodide/v0.27.1/full/"
+    });
+    setPyStatus("Python: loading numpy…", "loading");
+    await py.loadPackage("numpy");
+    pyodide = py;
+    setPyStatus("Python: ready", "ready");
+    return py;
+  })();
+  return pyodideLoading;
+}
+
+document.getElementById("script-run").addEventListener("click", async () => {
+  pyLogClear();
+  pyLog("Running…", "info");
+  let py;
+  try {
+    py = await getPyodide();
+  } catch (err) {
+    pyLog("Failed to load Pyodide: " + err.message, "err");
+    setPyStatus("Python: load failed", "err");
+    return;
+  }
+
+  // Build the harness wrapper: capture print, expose user functions.
+  const userCode = scriptEditor.value;
+  const harness =
+`import sys, json, math
+import numpy as np
+class _Capture:
+    def __init__(self): self.buf = []
+    def write(self, s):
+        if s: self.buf.append(s)
+    def flush(self): pass
+_stdout = _Capture()
+sys.stdout = _stdout
+sys.stderr = _stdout
+
+_user_ns = {"np": np, "math": math, "__builtins__": __builtins__}
+try:
+    exec(${JSON.stringify(userCode)}, _user_ns)
+    _err = None
+except Exception as _e:
+    import traceback as _tb
+    _err = _tb.format_exc()
+
+def _has(name): return (name in _user_ns and callable(_user_ns[name]))
+
+_result = {"stdout": "".join(_stdout.buf), "err": _err}
+
+if _err is None:
+    # Sample element_pattern(theta)
+    if _has("element_pattern"):
+        T = 361
+        thetas = np.linspace(0, np.pi, T)
+        try:
+            vals = np.asarray(_user_ns["element_pattern"](thetas), dtype=float)
+            if vals.ndim == 0:
+                # User wrote a scalar function; vectorize the slow way
+                vals = np.array([float(_user_ns["element_pattern"](t)) for t in thetas])
+            if vals.shape != (T,):
+                _result["err"] = f"element_pattern returned shape {vals.shape}, expected ({T},)"
+            else:
+                vals = np.abs(vals)
+                _result["element_theta_n"] = int(T)
+                _result["element_values"] = vals.tolist()
+        except Exception as _e:
+            import traceback as _tb
+            _result["err"] = "element_pattern raised:\\n" + _tb.format_exc()
+
+if _err is None and _result.get("err") is None:
+    # Call excitations(N)
+    if _has("excitations"):
+        try:
+            d = _user_ns["excitations"](int(${state.N}))
+            if not isinstance(d, dict):
+                _result["err"] = "excitations(N) must return a dict with 'amps' and 'phases'"
+            else:
+                amps = np.asarray(d.get("amps", np.ones(int(${state.N}))), dtype=float).ravel()
+                phases = np.asarray(d.get("phases", np.zeros(int(${state.N}))), dtype=float).ravel()
+                _result["amps"] = amps.tolist()
+                _result["phases"] = phases.tolist()
+        except Exception as _e:
+            import traceback as _tb
+            _result["err"] = "excitations raised:\\n" + _tb.format_exc()
+
+if _err is None and _result.get("err") is None:
+    if _has("pattern"):
+        try:
+            Tn, Pn = 121, 241
+            thetas = np.linspace(0, np.pi, Tn)
+            phis   = np.linspace(0, 2*np.pi, Pn)
+            TT, PP = np.meshgrid(thetas, phis, indexing="ij")
+            vals = np.asarray(_user_ns["pattern"](TT, PP), dtype=float)
+            if vals.shape != TT.shape:
+                # Try element-wise
+                vals = np.empty(TT.shape)
+                for i in range(Tn):
+                    for j in range(Pn):
+                        vals[i,j] = float(_user_ns["pattern"](thetas[i], phis[j]))
+            vals = np.abs(vals)
+            _result["pattern_theta_n"] = int(Tn)
+            _result["pattern_phi_n"] = int(Pn)
+            _result["pattern_values"] = vals.ravel().tolist()
+        except Exception as _e:
+            import traceback as _tb
+            _result["err"] = "pattern raised:\\n" + _tb.format_exc()
+
+import json as _json
+_result_json = _json.dumps(_result)
+`;
+
+  let resJson;
+  try {
+    await py.runPythonAsync(harness);
+    resJson = py.globals.get("_result_json");
+  } catch (err) {
+    pyLog("Python execution failed: " + err.message, "err");
+    return;
+  }
+  let res;
+  try {
+    res = JSON.parse(resJson);
+  } catch (err) {
+    pyLog("Could not parse script result.", "err");
+    return;
+  }
+  if (res.stdout) pyLog(res.stdout.trimEnd());
+  if (res.err) {
+    pyLog(res.err, "err");
+    return;
+  }
+
+  let didAnything = false;
+
+  if (res.element_values) {
+    const arr = new Float64Array(res.element_values);
+    let mx = 0;
+    for (let i = 0; i < arr.length; i++) if (arr[i] > mx) mx = arr[i];
+    if (mx < 1e-12) mx = 1;
+    state.customElemTable = arr;
+    state.customElemMax = mx;
+    state.scriptElemActive = true;
+    state.elemType = "custom";
+    document.getElementById("elem-type").value = "custom";
+    pyLog("· element_pattern: sampled at " + arr.length + " θ points, peak " + mx.toFixed(4), "ok");
+    didAnything = true;
+  }
+
+  if (res.amps) {
+    state.customAmps = new Float64Array(res.amps);
+    state.customPhases = new Float64Array(res.phases || new Array(res.amps.length).fill(0));
+    state.scriptExcActive = true;
+    state.ampDist = "custom";
+    document.getElementById("amp-dist").value = "custom";
+    pyLog("· excitations: N=" + state.customAmps.length +
+          ", amp peak " + Math.max.apply(null, [...state.customAmps].map(Math.abs)).toFixed(4) +
+          ", phases span " +
+          (Math.max.apply(null, state.customPhases) - Math.min.apply(null, state.customPhases)).toFixed(3) +
+          " rad", "ok");
+    didAnything = true;
+  }
+
+  if (res.pattern_values) {
+    const Tn = res.pattern_theta_n, Pn = res.pattern_phi_n;
+    const data = new Float32Array(res.pattern_values);
+    let mx = 0;
+    for (let i = 0; i < data.length; i++) if (data[i] > mx) mx = data[i];
+    if (mx < 1e-12) mx = 1;
+    state.customPatternGrid = { theta: Tn, phi: Pn, data };
+    state.customPatternMax = mx;
+    state.scriptPatternActive = true;
+    pyLog("· pattern: full (θ,φ) override loaded (" + Tn + "×" + Pn + " grid)", "ok");
+    didAnything = true;
+  }
+
+  if (!didAnything) {
+    pyLog("Script ran, but none of element_pattern / excitations / pattern were defined.", "warn");
+  } else {
+    pyLog("Done — visualization updated.", "ok");
+  }
+  refresh();
+});
+
+document.getElementById("script-clear").addEventListener("click", () => {
+  scriptEditor.value = DEFAULT_SCRIPT;
+});
+
+document.getElementById("script-revert").addEventListener("click", () => {
+  state.scriptElemActive = false;
+  state.scriptExcActive = false;
+  state.scriptPatternActive = false;
+  state.customElemTable = null;
+  state.customElemMax = 1;
+  state.customAmps = null;
+  state.customPhases = null;
+  state.customPatternGrid = null;
+  state.customPatternMax = 1;
+  if (state.elemType === "custom") {
+    state.elemType = "hertz";
+    document.getElementById("elem-type").value = "hertz";
+  }
+  if (state.ampDist === "custom") {
+    state.ampDist = "uniform";
+    document.getElementById("amp-dist").value = "uniform";
+  }
+  pyLog("Reverted to GUI-driven element and amplitudes.", "info");
+  refresh();
+});
+
+document.getElementById("script-help").addEventListener("click", e => {
+  e.stopPropagation();
+  helpPopup.classList.toggle("open");
+  const rect = e.target.getBoundingClientRect();
+  helpPopup.style.left = Math.max(8, rect.left - 120) + "px";
+  helpPopup.style.top  = (window.scrollY + rect.bottom + 8) + "px";
+});
+document.getElementById("help-close").addEventListener("click", () => helpPopup.classList.remove("open"));
+document.addEventListener("click", e => {
+  if (!helpPopup.contains(e.target) && e.target.id !== "script-help") {
+    helpPopup.classList.remove("open");
+  }
+});
+
+/* =====================================================
+   EXAMPLES
+   ===================================================== */
+const EXAMPLES = {
+  ex_hertz: `def element_pattern(theta):
+    # Hertzian (infinitesimal) dipole
+    return np.abs(np.sin(theta))
+`,
+  ex_cos_elem: `def element_pattern(theta):
+    # Cos^2-shaped element (broadside max), common toy model.
+    return np.cos(theta)**2 * (np.cos(theta) > 0)
+`,
+  ex_yagi: `def element_pattern(theta):
+    # Cardioid-ish directional element (Yagi-like main beam toward +z)
+    # F(theta) = (1 + cos(theta))/2, raised to a power for sharpness
+    return ((1 + np.cos(theta))/2)**3
+`,
+  ex_loop_a: `# Circular loop with a/lambda = 0.3, via a power-series J1
+# (Pyodide doesn't ship scipy by default, so we compute J1 directly.)
+def element_pattern(theta):
+    ka = 2*np.pi*0.3
+    x = ka * np.sin(theta)
+    # J1(x) = (x/2) * sum_{k>=0} (-(x/2)^2)^k / (k! (k+1)!)
+    term = (x/2.0).astype(float) if isinstance(x, np.ndarray) else float(x/2.0)
+    s = np.array(term, copy=True)
+    fact = 1.0
+    for k in range(1, 30):
+        fact = -fact / (k*(k+1))
+        # term_k = (x/2) * (-(x/2)^2)^k / (k! (k+1)!)
+        s = s + (x/2.0) * fact * (x/2.0)**(2*k)
+    return np.abs(s)
+`,
+  ex_taylor: `def excitations(N):
+    # Taylor-like raised-cosine taper (cos squared)
+    n = np.arange(N)
+    if N == 1:
+        return {"amps": np.ones(1), "phases": np.zeros(1)}
+    x = (n - (N-1)/2) / ((N-1)/2)
+    amps = (0.5 + 0.5*np.cos(np.pi*x))**2
+    return {"amps": amps, "phases": np.zeros(N)}
+`,
+  ex_chirp: `def excitations(N):
+    # Quadratic phase chirp -> near-field focusing-like effect.
+    n = np.arange(N)
+    amps = np.ones(N)
+    # Phase varies as n^2 (defocused aperture)
+    phases = 0.04 * (n - (N-1)/2)**2
+    return {"amps": amps, "phases": phases}
+`,
+  ex_scan: `def excitations(N):
+    # Steer broadside-uniform array to theta0 = 60 deg from z (cosine -> 0.5)
+    # phi_n = -n * k*d * cos(theta0); we don't know d here, so assume d = 0.5*lambda
+    d_over_lambda = 0.5
+    theta0 = np.deg2rad(60.0)
+    n = np.arange(N)
+    return {"amps": np.ones(N),
+            "phases": -2*np.pi*d_over_lambda*n*np.cos(theta0)}
+`,
+  ex_dolph: `def excitations(N):
+    # Dolph-Chebyshev for broadside, target SLL = -30 dB.
+    # Build by direct expansion of T_{N-1}(z0 * cos(t)) in cos(k t).
+    if N < 2:
+        return {"amps": np.ones(N), "phases": np.zeros(N)}
+    R = 10**(30/20)
+    z0 = np.cosh(np.arccosh(R)/(N-1))
+    K = 4096
+    t = (np.arange(K)+0.5)*np.pi/K
+    x = z0*np.cos(t)
+    # T_{N-1}(x) via recurrence
+    Tprev, Tcur = np.ones_like(x), x.copy()
+    for _ in range(2, N):
+        Tprev, Tcur = Tcur, 2*x*Tcur - Tprev
+    f = Tcur if N >= 2 else np.ones_like(x)
+    b = np.zeros(N)
+    for k in range(N):
+        b[k] = (np.pi/K) * np.sum(f*np.cos(k*t))
+        b[k] *= (1 if k==0 else 2)/np.pi
+    I = np.zeros(N)
+    if N % 2 == 1:
+        M = (N-1)//2
+        I[M] = b[0]
+        for m in range(1, M+1):
+            v = b[2*m]/2
+            I[M-m] = v; I[M+m] = v
+    else:
+        M = N//2
+        for m in range(1, M+1):
+            v = b[2*m-1]/2
+            I[M-m] = v; I[M+m-1] = v
+    I = I / np.max(np.abs(I))
+    return {"amps": I, "phases": np.zeros(N)}
+`,
+  ex_phased_dolph: `def excitations(N):
+    # Dolph-Chebyshev amplitudes + progressive scan to theta0 = 70 deg.
+    if N < 2:
+        return {"amps": np.ones(N), "phases": np.zeros(N)}
+    SLL = 25  # dB
+    R = 10**(SLL/20)
+    z0 = np.cosh(np.arccosh(R)/(N-1))
+    K = 4096
+    t = (np.arange(K)+0.5)*np.pi/K
+    x = z0*np.cos(t)
+    Tprev, Tcur = np.ones_like(x), x.copy()
+    for _ in range(2, N):
+        Tprev, Tcur = Tcur, 2*x*Tcur - Tprev
+    f = Tcur
+    b = np.zeros(N)
+    for k in range(N):
+        b[k] = (np.pi/K)*np.sum(f*np.cos(k*t))
+        b[k] *= (1 if k==0 else 2)/np.pi
+    I = np.zeros(N)
+    if N % 2 == 1:
+        M = (N-1)//2; I[M] = b[0]
+        for m in range(1, M+1):
+            v = b[2*m]/2; I[M-m]=v; I[M+m]=v
+    else:
+        M = N//2
+        for m in range(1, M+1):
+            v = b[2*m-1]/2; I[M-m]=v; I[M+m-1]=v
+    I = I/np.max(np.abs(I))
+    d_over_lambda = 0.5
+    theta0 = np.deg2rad(70.0)
+    n = np.arange(N)
+    return {"amps": I, "phases": -2*np.pi*d_over_lambda*n*np.cos(theta0)}
+`,
+  ex_full: `def pattern(theta, phi):
+    # Fully-custom directional pattern that doesn't factor as E*AF.
+    # Example: pencil beam aimed at (theta0, phi0).
+    theta0 = np.deg2rad(45.0)
+    phi0   = np.deg2rad(60.0)
+    # Cosine between (theta,phi) and the target direction:
+    cos_angle = (np.sin(theta)*np.sin(theta0)*np.cos(phi - phi0)
+                 + np.cos(theta)*np.cos(theta0))
+    return np.maximum(0, cos_angle)**20
+`,
+};
+
+document.getElementById("script-examples").addEventListener("change", e => {
+  const key = e.target.value;
+  if (!key) return;
+  const code = EXAMPLES[key];
+  if (code) {
+    scriptEditor.value = code;
+    if (!scriptBody.classList.contains("open")) {
+      scriptBody.classList.add("open");
+      scriptHead.querySelector(".left span").textContent = "▾";
+    }
+  }
+  e.target.value = "";
+});
+
+/* =====================================================
+   FIRST RENDER
+   ===================================================== */
 refresh();
 </script>
 </body>
